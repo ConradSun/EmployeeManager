@@ -299,10 +299,17 @@ StaffInfo *get_item_from_table(HashTable *hash_table, uint64_t key) {
     return node->value;
 }
 
+/**
+ * @brief       打印指定员工信息
+ * @param value 待打印项
+ */
 void print_staff_info(StaffInfo *value) {
     printf("name: %s, date: %04d-%02d-%02d, department: %s, position: %s\n", value->name, value->date.year, value->date.month, value->date.day, value->department, value->position);
 }
 
+/**
+ * @brief       遍历输出所有项信息
+ */
 void print_all_of_table(HashTable *hash_table) {
     for (uint64_t i = 0; i < hash_table->bucket_count; ++i) {
         Bucket *bucket = &hash_table->buckets[i];

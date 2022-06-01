@@ -38,6 +38,50 @@ static const char *type_str[] = {
     [POS]   = "pos",
 };
 
+/**
+ * @brief           判断字符串是否匹配指定前缀
+ * @param string    待判断字符串
+ * @param prefix    匹配前缀
+ * @return          false表示匹配失败，否则为成功
+ */
+static bool is_string_prefix(const char *string, const char *prefix) {
+    size_t str_len = strlen(string);
+    size_t pre_len = strlen(prefix);
+    
+    if (str_len < pre_len) {
+        return false;
+    }
+    for (size_t i = 0; i < pre_len; ++i) {
+        if (string[i] != prefix[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * @brief           获取分割符位置[空格或换行字符]
+ * @param string    待处理字符串
+ * @return          0表示不存在，否则为分割符位置
+ */
+static uint16_t get_split_site(const char *string) {
+    size_t index = 0;
+    size_t size = strlen(string);
+    
+    while (index < size) {
+        if (string[index] == ' ' || string[index] == '\n') {
+            return index;
+        }
+        index++;
+    }
+    
+    return 0;
+}
+
+/**
+ * @brief   获取终端输入信息
+ * @return  false表示获取失败，否则为成功
+ */
 bool get_input_message(void) {
     FD_ZERO(&input_set);
     FD_SET(STDIN_FILENO, &input_set);
@@ -57,6 +101,11 @@ bool get_input_message(void) {
     return true;
 }
 
+/**
+ * @brief           解析输入指令
+ * @param string    待解析字符串
+ * @return          指令
+ */
 Command parse_input_command(const char *string) {
     if (string == NULL) {
         return NUL;
@@ -73,35 +122,25 @@ Command parse_input_command(const char *string) {
     return cmd;
 }
 
-static inline bool is_string_prefix(const char *string, const char *prefix, size_t *end) {
-    size_t str_len = strlen(string);
-    size_t pre_len = strlen(prefix);
-    
-    if (str_len < pre_len) {
-        return false;
-    }
-    for (size_t i = 0; i < pre_len; ++i) {
-        if (string[i] != prefix[i]) {
-            return false;
-        }
-    }
-    
-    *end = pre_len;
-    return true;
-}
-
+/**
+ * @brief           解析员工信息
+ * @param string    待解析字符串
+ * @param info      信息填充地址
+ * @return          false表示解析失败，否则为成功
+ */
 bool parse_staff_info(const char *string, StaffInfo *info) {
     if (string == NULL) {
         return false;
     }
     
-    InfoType type = NAME;
-    size_t end = 0;
+    int type = -1;
     size_t size = strlen(string);
+    size_t end = 0;
     for (uint8_t i = NAME; i < MAX_TYPE; ++i) {
-        if (is_string_prefix(string, type_str[i], &end)) {
-            if (string[end] == ':') {
-                end++;
+        if (is_string_prefix(string, type_str[i])) {
+            size_t len = strlen(type_str[i]);
+            if (string[len] == ':') {
+                end = len + 1;
                 type = i;
                 break;
             }
@@ -110,7 +149,7 @@ bool parse_staff_info(const char *string, StaffInfo *info) {
             }
         }
     }
-    if (end == 0 || end >= size) {
+    if (type == -1) {
         return false;
     }
     
@@ -123,7 +162,6 @@ bool parse_staff_info(const char *string, StaffInfo *info) {
                 printf("Invalid date\n");
                 return false;
             }
-            
             info->date.year = (string[end] - '0') * 1000 + (string[end+1] - '0') * 100 + (string[end+2] - '0') * 10 + (string[end+3] - '0');
             info->date.month = (string[end+5] - '0') * 10 + (string[end+6] - '0');
             info->date.day = (string[end+8] - '0') * 10 + (string[end+9] - '0');
@@ -142,6 +180,13 @@ bool parse_staff_info(const char *string, StaffInfo *info) {
     return true;
 }
 
+/**
+ * @brief               处理输入指令
+ * @param command       指令
+ * @param job_number    工号
+ * @param info          员工信息
+ * @param is_opt_all    全局操作标志[仅DEL、GET指令支持]
+ */
 void process_input_command(Command command, uint64_t job_number, StaffInfo *info, bool is_opt_all) {
     StaffInfo *value = NULL;
     switch (command) {
@@ -198,20 +243,9 @@ void process_input_command(Command command, uint64_t job_number, StaffInfo *info
     FREE(info->department)
 }
 
-uint16_t get_split_site(const char *string) {
-    size_t index = 0;
-    size_t size = strlen(string);
-    
-    while (index < size) {
-        if (string[index] == ' ' || string[index] == '\n') {
-            return index;
-        }
-        index++;
-    }
-    
-    return 0;
-}
-
+/**
+ * @brief 解析输入信息
+ */
 void parse_input_messgae(void) {
     Command command = NUL;
     uint64_t job_number = 0;
@@ -260,6 +294,7 @@ void parse_input_messgae(void) {
     job_number = atoi(message);
     bzero(message, buffer_size);
     
+    // 获取员工信息
     while (index < size) {
         start = index;
         index = get_split_site(input_msg + start) + start;
