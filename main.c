@@ -27,13 +27,10 @@ void test_hash_table(void) {
     }
     printf("count: %llu\n", g_hash_table->count);
     
-    StaffInfo *value = get_item_from_table(g_hash_table, 1022);
-    printf("name: %s, date: %d-%d-%d, department: %s, position: %s\n", value->name, value->date.year, value->date.month, value->date.day, value->department, value->position);
-    
+    get_item_from_table(g_hash_table, 1022);
     common_value.date.day = 30;
     modify_item_from_table(g_hash_table, 1022, &common_value);
-    value = get_item_from_table(g_hash_table, 1022);
-    printf("name: %s, date: %d-%d-%d, department: %s, position: %s\n", value->name, value->date.year, value->date.month, value->date.day, value->department, value->position);
+    get_item_from_table(g_hash_table, 1022);
     
     for (uint64_t key = 1; key < 50001; key++) {
         remove_item_from_table(g_hash_table, key);

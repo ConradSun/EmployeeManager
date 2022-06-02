@@ -60,6 +60,80 @@ static inline void copy_value(StaffInfo *dst_value, const StaffInfo *src_value) 
 }
 
 /**
+ * @brief       比较日期是否相同
+ * @param date1 日期1
+ * @param date2 日期2
+ * @return      false表示不同，否则为相同
+ */
+static inline bool is_date_equal(Date date1, Date date2) {
+    if (date1.year == 0 && date1.month == 0 && date1.day == 0) {
+        return true;
+    }
+
+    if (date1.year == date2.year && date1.month == date2.month && date1.day == date2.day) {
+        return true;
+    }
+    return false;
+}
+
+/**
+ * @brief           比较字符串是否相同
+ * @param src_str   字符串1
+ * @param dst_str   字符串2
+ * @return          false表示不同，否则为相同
+ */
+static bool is_string_equal(const char *src_str, const char *dst_str) {
+    if (src_str != NULL) {
+        if (dst_str != NULL) {
+            if (strcmp(src_str, dst_str) != 0) {
+                return false;
+            }
+        }
+        else {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/**
+ * @brief           比较员工信息是否相同
+ * @param src_value 信息1
+ * @param dst_value 信息2
+ * @return          false表示不同，否则为相同
+ */
+static bool is_value_equal(const StaffInfo *src_value, const StaffInfo *dst_value) {
+    if (src_value == NULL || dst_value == NULL) {
+        return false;
+    }
+
+    if (!is_string_equal(src_value->name, dst_value->name)) {
+        return false;
+    }
+    if (!is_string_equal(src_value->department, dst_value->department)) {
+        return false;
+    }
+    if (!is_string_equal(src_value->position, dst_value->position)) {
+        return false;
+    }
+    if (!is_date_equal(src_value->date, dst_value->date)) {
+        return false;
+    }
+    
+    return true;
+}
+
+/**
+ * @brief               打印指定员工信息
+ * @param job_number    工号
+ * @param value         员工信息
+ */
+static void print_staff_info(uint64_t job_number, StaffInfo *value) {
+    printf("job_number: %llu, name: %s, date: %04d-%02d-%02d, department: %s, position: %s\n", job_number, value->name, value->date.year, value->date.month, value->date.day, value->department, value->position);
+}
+
+/**
  * @brief           创建哈希表
  * @param max_size  最大容量
  * @return          哈希表
@@ -284,38 +358,60 @@ bool modify_item_from_table(HashTable *hash_table, uint64_t key, StaffInfo *valu
 }
 
 /**
- * @brief               从哈希表获取指定项
+ * @brief               从哈希表获取指定项[关键字工号]
  * @param hash_table    哈希表
  * @param key           待获取项键
- * @return              所查询项值
  */
-StaffInfo *get_item_from_table(HashTable *hash_table, uint64_t key) {
+void get_item_from_table(HashTable *hash_table, uint64_t key) {
     Node *node = NULL;
     if (!find_item_from_table(hash_table, key, &node, NULL)) {
         printf("Failed to get item for not here.\n");
-        return NULL;
+        return;
+    }
+    print_staff_info(key, node->value);
+}
+
+/**
+ * @brief               从哈希表获取指定项[匹配指定信息]
+ * @param hash_table    哈希表
+ * @param value         待匹配项
+ */
+void get_items_by_info(HashTable *hash_table, StaffInfo *value) {
+    if (hash_table == NULL || value == NULL) {
+        return;
     }
     
-    return node->value;
-}
-
-/**
- * @brief       打印指定员工信息
- * @param value 待打印项
- */
-void print_staff_info(StaffInfo *value) {
-    printf("name: %s, date: %04d-%02d-%02d, department: %s, position: %s\n", value->name, value->date.year, value->date.month, value->date.day, value->department, value->position);
-}
-
-/**
- * @brief       遍历输出所有项信息
- */
-void print_all_of_table(HashTable *hash_table) {
+    uint64_t count = 0;
     for (uint64_t i = 0; i < hash_table->bucket_count; ++i) {
         Bucket *bucket = &hash_table->buckets[i];
         Node *current_node = bucket->head;
         while (current_node != NULL) {
-            print_staff_info(current_node->value);
+            if (is_value_equal(value, current_node->value)) {
+                print_staff_info(current_node->key, current_node->value);
+                count++;
+            }
+            current_node = current_node->next;
+        }
+    }
+
+    if (count == 0) {
+        printf("No matching items found.\n");
+    }
+}
+
+/**
+ * @brief 遍历输出所有项信息
+ */
+void print_all_of_table(HashTable *hash_table) {
+    if (hash_table == NULL) {
+        return;
+    }
+
+    for (uint64_t i = 0; i < hash_table->bucket_count; ++i) {
+        Bucket *bucket = &hash_table->buckets[i];
+        Node *current_node = bucket->head;
+        while (current_node != NULL) {
+            print_staff_info(current_node->key, current_node->value);
             current_node = current_node->next;
         }
     }

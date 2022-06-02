@@ -39,6 +39,23 @@ static const char *type_str[] = {
 };
 
 /**
+ * @brief           字符串中的小写字母转换为大写
+ * @param string    待判断字符串
+ */
+static void string_to_upper(char *string) {
+    if (string == NULL) {
+        return;
+    }
+
+    size_t size = strlen(string);
+    for (size_t i = 0; i < size; i++) {
+        if (string[i] >= 'a' && string[i] <= 'z') {
+            string[i] -= ('a' - 'A');
+        }
+    }
+}
+
+/**
  * @brief           判断字符串是否匹配指定前缀
  * @param string    待判断字符串
  * @param prefix    匹配前缀
@@ -106,12 +123,13 @@ bool get_input_message(void) {
  * @param string    待解析字符串
  * @return          指令
  */
-Command parse_input_command(const char *string) {
+Command parse_input_command(char *string) {
     if (string == NULL) {
         return NUL;
     }
     
     Command cmd = NUL;
+    string_to_upper(string);
     for (uint8_t i = NUL + 1; i < MAX_CMD; ++i) {
         if (strcmp(string, cmd_str[i]) == 0) {
             cmd = i;
@@ -188,7 +206,6 @@ bool parse_staff_info(const char *string, StaffInfo *info) {
  * @param is_opt_all    全局操作标志[仅DEL、GET指令支持]
  */
 void process_input_command(Command command, uint64_t job_number, StaffInfo *info, bool is_opt_all) {
-    StaffInfo *value = NULL;
     switch (command) {
         case ADD:
             if (add_item_to_table(&g_hash_table, job_number, info, true)) {
@@ -217,16 +234,20 @@ void process_input_command(Command command, uint64_t job_number, StaffInfo *info
                 print_all_of_table(g_hash_table);
             }
             else {
-                value = get_item_from_table(g_hash_table, job_number);
-                print_staff_info(value);
+                if (job_number > 0) {
+                    get_item_from_table(g_hash_table, job_number);
+                }
+                else {
+                    get_items_by_info(g_hash_table, info);
+                }
             }
             break;
             
         case HELP:
             printf("Use ADD cmd to add a staff to the database.\n\te.g. ADD 10086 name:Zhangsan date:2022-05-11 dept:ZTA pos:engineer\n"
                    "Use DEL cmd to remove a/all staff from the database.\n\te.g. DEL 10086 to remove a staff, or DEL * to clear the database.\n"
-                   "Use MOD cmd to modify a staff's info.\n\te.g. MOD 10086 dept:CWPP\n"
-                   "Use GET cmd to obtain a/all staff's info.\n\te.g. GET 10086 to obtain a staff's info, or GET * to print all staff's info.\n");
+                   "Use MOD cmd to modify a staff's info.\n\te.g. MOD 10086 dept:CWPP name:Lisi\n"
+                   "Use GET cmd to obtain a/all staff's info.\n\te.g. GET 10086 to obtain a staff's info, or GET name:Lisi dept:ZTA to obtain on or more staff's info, or GET * to print all staff's info.\n");
             break;
         case EXIT:
             printf("Process is over, now quit.\n");
@@ -292,6 +313,10 @@ void parse_input_messgae(void) {
     index++;
     strlcpy(message, input_msg + start, index - start);
     job_number = atoi(message);
+    // 当前输入不含工号，则解析为员工信息
+    if (job_number == 0) {
+        index = start;
+    }
     bzero(message, buffer_size);
     
     // 获取员工信息

@@ -67,9 +67,9 @@ HashTable *enlarge_hash_table(HashTable *old_table);
 bool add_item_to_table(HashTable **hash_table, uint64_t key, StaffInfo *value, bool is_copy);
 bool remove_item_from_table(HashTable *hash_table, uint64_t key);
 bool modify_item_from_table(HashTable *hash_table, uint64_t key, StaffInfo *value);
-StaffInfo *get_item_from_table(HashTable *hash_table, uint64_t key);
+void get_item_from_table(HashTable *hash_table, uint64_t key);
+void get_items_by_info(HashTable *hash_table, StaffInfo *value);
 
-void print_staff_info(StaffInfo *value);
 void print_all_of_table(HashTable *hash_table);
 
 #endif /* hash_table_h */
