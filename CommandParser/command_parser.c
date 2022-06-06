@@ -7,14 +7,14 @@
 
 #include "command_parser.h"
 
-static fd_set input_set = {0};
-static const uint16_t default_hash_size = 1024;
-static const uint8_t date_str_size = 10;
-static const uint8_t max_cmd_size = 5;
-static const uint16_t buffer_size = 1024;
-static char input_msg[buffer_size] = {'\0'};
+static fd_set input_set = {0};                      // 标准输入管理
+static const uint16_t default_hash_size = 1024;     // 默认哈希表容量
+static const uint8_t date_str_size = 10;            // 日期字符串大小
+static const uint8_t max_cmd_size = 5;              // 最大指令长度
+static const uint16_t buffer_size = 1024;           // 输入缓存大小
+static char input_msg[buffer_size] = {'\0'};        // 输入缓存
 
-HashTable *g_hash_table = NULL;
+HashTable *g_hash_table = NULL;                     // 哈希表
 
 /**
 * @brief 指令类型描述
@@ -77,14 +77,27 @@ static bool is_string_prefix(const char *string, const char *prefix) {
 }
 
 /**
- * @brief           获取分割符位置[空格或换行字符]
- * @param string    待处理字符串
- * @return          0表示不存在，否则为分割符位置
+ * @brief               获取分割符位置[空格或换行字符]
+ * @param string        待处理字符串
+ * @param space_count   无效空格数量
+ * @return              -1表示不存在，否则为分割符位置
  */
-static uint16_t get_split_site(const char *string) {
+static int get_split_site(const char *string, int *space_count) {
     size_t index = 0;
     size_t size = strlen(string);
     
+    // 跳过无效空格
+    while (index < size) {
+        if (string[index] == ' ') {
+            index++;
+        }
+        else {
+            break;
+        }
+    }
+    *space_count = index;
+    
+    // 查找分隔符
     while (index < size) {
         if (string[index] == ' ' || string[index] == '\n') {
             return index;
@@ -92,7 +105,7 @@ static uint16_t get_split_site(const char *string) {
         index++;
     }
     
-    return 0;
+    return -1;
 }
 
 /**
@@ -129,6 +142,7 @@ Command parse_input_command(char *string) {
     }
     
     Command cmd = NUL;
+    // 指令大小写不敏感
     string_to_upper(string);
     for (uint8_t i = NUL + 1; i < MAX_CMD; ++i) {
         if (strcmp(string, cmd_str[i]) == 0) {
@@ -154,6 +168,7 @@ bool parse_staff_info(const char *string, StaffInfo *info) {
     int type = -1;
     size_t size = strlen(string);
     size_t end = 0;
+    // 匹配信息字符串前缀，获取有效信息类型
     for (uint8_t i = NAME; i < MAX_TYPE; ++i) {
         if (is_string_prefix(string, type_str[i])) {
             size_t len = strlen(type_str[i]);
@@ -167,7 +182,7 @@ bool parse_staff_info(const char *string, StaffInfo *info) {
             }
         }
     }
-    if (type == -1) {
+    if (type == -1 || end >= size) {
         return false;
     }
     
@@ -176,6 +191,7 @@ bool parse_staff_info(const char *string, StaffInfo *info) {
             info->name = strndup(string + end, size - end);
             break;
         case DATE:
+            // 后面补充日期格式校验
             if (size - end != date_str_size) {
                 printf("Invalid date\n");
                 return false;
@@ -272,19 +288,21 @@ void parse_input_messgae(void) {
     uint64_t job_number = 0;
     StaffInfo info = {0};
     
-    char message[buffer_size] = {'\0'};
-    size_t size = strlen(input_msg);
-    size_t start = 0;
-    size_t index = 0;
+    char message[buffer_size] = {'\0'}; // 待解析字符串
+    size_t size = strlen(input_msg);    // 原始输入大小
+    size_t start = 0;                   // 待解析串起点
+    int index = 0;                      // 当前解析位置
+    int space_count = 0;                // 待解析串前空格数量
     
     // 获取操作指令
-    index = get_split_site(input_msg);
-    if (index == 0 || index >= max_cmd_size) {
+    index = get_split_site(input_msg, &space_count);
+    start += space_count;
+    if (index == -1 || (index - space_count) >= max_cmd_size) {
         printf("Input is invalid [too long command].\n");
         return;
     }
     index++;
-    strlcpy(message, input_msg, index);
+    strlcpy(message, input_msg + start, index - start);
     command = parse_input_command(message);
     bzero(message, buffer_size);
     if (command == NUL) {
@@ -305,8 +323,9 @@ void parse_input_messgae(void) {
     
     // 获取员工工号
     start = index;
-    index = get_split_site(input_msg + start) + start;
-    if (index == 0) {
+    index = get_split_site(input_msg + start, &space_count) + start;
+    start += space_count;
+    if (index == -1) {
         printf("Input is invalid [invalid job number].\n");
         return;
     }
@@ -322,8 +341,9 @@ void parse_input_messgae(void) {
     // 获取员工信息
     while (index < size) {
         start = index;
-        index = get_split_site(input_msg + start) + start;
-        if (index == 0) {
+        index = get_split_site(input_msg + start, &space_count) + start;
+        start += space_count;
+        if (index == -1) {
             printf("Input is invalid [invalid staff info].\n");
             break;
         }

@@ -66,6 +66,7 @@ static inline void copy_value(StaffInfo *dst_value, const StaffInfo *src_value) 
  * @return      false表示不同，否则为相同
  */
 static inline bool is_date_equal(Date date1, Date date2) {
+    // date1全0表示通配
     if (date1.year == 0 && date1.month == 0 && date1.day == 0) {
         return true;
     }
@@ -83,6 +84,7 @@ static inline bool is_date_equal(Date date1, Date date2) {
  * @return          false表示不同，否则为相同
  */
 static bool is_string_equal(const char *src_str, const char *dst_str) {
+    // src_str为空表示通配
     if (src_str != NULL) {
         if (dst_str != NULL) {
             if (strcmp(src_str, dst_str) != 0) {
@@ -146,7 +148,8 @@ HashTable *create_hash_table(uint64_t max_size) {
     }
     
     hash_table->max_size = max_size;
-    hash_table->bucket_count = ((max_size / per_bucket + 1) >> 1) << 2;
+    // 保证桶数量为偶数个
+    hash_table->bucket_count = (((max_size + per_bucket) / per_bucket) >> 1) << 1;
     hash_table->buckets = calloc(1, sizeof(Bucket) * hash_table->bucket_count);
     if (hash_table->buckets == NULL) {
         printf("Failed to calloc resources for buckets.\n");
@@ -200,6 +203,7 @@ HashTable *enlarge_hash_table(HashTable *old_table) {
         return NULL;
     }
     
+    // 转移旧表值至新表，浅拷贝，仅复制指针
     for (uint64_t i = 0; i < old_table->bucket_count; ++i) {
         Bucket *bucket = &old_table->buckets[i];
         Node *current_node = bucket->head;
@@ -274,7 +278,7 @@ bool add_item_to_table(HashTable **hash_table, uint64_t key, StaffInfo *value, b
         return false;
     }
     
-    if (table->count == table->max_size) {
+    if (table->count > table->max_size) {
         table = enlarge_hash_table(table);
         if (table == NULL) {
             return false;
@@ -297,9 +301,11 @@ bool add_item_to_table(HashTable **hash_table, uint64_t key, StaffInfo *value, b
     }
     
     Bucket *bucket = &table->buckets[hash_code(key, table->bucket_count)];
+    // 头结点无值存储至头
     if (bucket->head == NULL) {
         bucket->head = new_node;
     }
+    // 头结点有值存储至尾
     else {
         Node *tail_node = bucket->head;
         while (tail_node->next != NULL) {
@@ -326,10 +332,12 @@ bool remove_item_from_table(HashTable *hash_table, uint64_t key) {
         return false;
     }
     
+    // 待删除结点为头结点
     if (last == current) {
         Bucket *bucket = &hash_table->buckets[hash_code(key, hash_table->bucket_count)];
         bucket->head = current->next;
     }
+    // 待删除结点为中间结点
     else {
         last->next = current->next;
     }
@@ -382,6 +390,7 @@ void get_items_by_info(HashTable *hash_table, StaffInfo *value) {
     }
     
     uint64_t count = 0;
+    // 遍历输出所有匹配项，无序输出
     for (uint64_t i = 0; i < hash_table->bucket_count; ++i) {
         Bucket *bucket = &hash_table->buckets[i];
         Node *current_node = bucket->head;
