@@ -17,20 +17,20 @@
  * @brief 日期
  */
 typedef struct {
-    uint16_t year;
-    uint8_t month;
-    uint8_t day;
+    uint16_t year;      // 年
+    uint8_t month;      // 月
+    uint8_t day;        // 日
 } short_date_t;
 
 /**
  * @brief 员工信息
  */
 typedef struct {
-    uint64_t job_number;
-    char *name;
-    short_date_t date;
-    char *department;
-    char *position;
+    uint64_t job_number;    // 工号
+    char *name;             // 姓名
+    short_date_t date;      // 日期
+    char *department;       // 部门
+    char *position;         // 职位
 } staff_info_t;
 
 #endif /* common_h */
