@@ -149,13 +149,13 @@ user_command_t parse_input_command(char *string) {
  */
 sort_type_t parse_sort_type(const char *string) {
     char sort_begin[] = "--sort:";
-    if (string == NULL || strlen(string) <= strlen(sort_begin)) {
-        return SORT_NONE;
-    }
-
     uint8_t begin = strlen(sort_begin);
     char id[] = "id";
     char date[] = "date";
+
+    if (string == NULL || strlen(string) <= strlen(sort_begin)) {
+        return SORT_NONE;
+    }
     if (is_string_prefix(string, sort_begin)) {
         if (strcmp(string+begin, id) == 0) {
             return SORT_ID;

@@ -121,7 +121,6 @@ static void add_employee(uint64_t job_number, staff_info_t *info, bool is_opt_al
 static void del_employee(uint64_t job_number, staff_info_t *info, bool is_opt_all, sort_type_t type) {
     if (is_opt_all) {
         delete_hash_table(&s_hash_table);
-        s_hash_table = create_hash_table(default_hash_size);
         LOG_O("The database is deleted.")
     }
     else {
@@ -152,7 +151,6 @@ static void mod_employee(uint64_t job_number, staff_info_t *info, bool is_opt_al
  * @param type          排序方式[仅DGET指令支持]
  */
 static void get_employee(uint64_t job_number, staff_info_t *info, bool is_opt_all, sort_type_t type) {
-    
     if (is_opt_all) {
         uint64_t count = 0;
         staff_info_t **staff_infos = get_all_items_of_table(s_hash_table, &count);
