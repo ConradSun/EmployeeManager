@@ -1,12 +1,12 @@
 //
-//  em_log.h
+//  log.h
 //  EmployeeManager
 //
 //  Created by 孙康 on 2022/06/10.
 //
 
-#ifndef em_log_h
-#define em_log_h
+#ifndef log_h
+#define log_h
 
 /**
 * @brief 日志打印等级
@@ -25,12 +25,18 @@ typedef enum {
 #define LOG_LEVEL   LOG_INFO
 
 /**
-* @brief C接口日志
+* @brief 调试/测试日志接口
 */
 #define LOG_C(level, format, ...) \
     if (LOG_LEVEL >= level) { \
         printf("%s %s:%d [-] " format "\n", \
-        #level, __func__, __LINE__, ##__VA_ARGS__); \
+            #level, __func__, __LINE__, ##__VA_ARGS__); \
     } \
 
-#endif /* em_log_h */
+/**
+* @brief 直接打印日志接口
+*/
+#define LOG_O(format, ...) \
+    printf(format "\n", ##__VA_ARGS__); \
+
+#endif /* log_h */

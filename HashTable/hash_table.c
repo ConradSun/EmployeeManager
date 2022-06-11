@@ -6,7 +6,8 @@
 //
 
 #include "hash_table.h"
-#include "em_log.h"
+#include "common.h"
+#include "log.h"
 
 static const uint8_t per_bucket = 4;      // 哈希桶容量
 static const float enlarge_factor = 1.5;  // 扩容倍数
@@ -42,6 +43,7 @@ static inline void clear_value(staff_info_t *value) {
  */
 static inline void copy_value(staff_info_t *dst_value, const staff_info_t *src_value) {
     if (dst_value != NULL && src_value != NULL) {
+        dst_value->job_number = src_value->job_number;
         if (src_value->date.year != 0) {
             dst_value->date = src_value->date;
         }
@@ -125,15 +127,6 @@ static bool is_value_equal(const staff_info_t *src_value, const staff_info_t *ds
     }
     
     return true;
-}
-
-/**
- * @brief               打印指定员工信息
- * @param job_number    工号
- * @param value         员工信息
- */
-static void print_staff_info(uint64_t job_number, staff_info_t *value) {
-    LOG_C(LOG_INFO, "job_number: %llu, name: %s, date: %04d-%02d-%02d, department: %s, position: %s.", job_number, value->name, value->date.year, value->date.month, value->date.day, value->department, value->position)
 }
 
 /**
@@ -292,7 +285,9 @@ bool add_item_to_table(hash_table_t **hash_table, uint64_t key, staff_info_t *va
         LOG_C(LOG_ERROR, "Failed to calloc resources for new node.");
         return false;
     }
+
     new_node->key = key;
+    value->job_number = key;
     if (is_copy) {
         new_node->value = calloc(1, sizeof(staff_info_t));
         copy_value(new_node->value, value);
@@ -370,59 +365,79 @@ bool modify_item_from_table(hash_table_t *hash_table, uint64_t key, staff_info_t
  * @brief               从哈希表获取指定项[关键字工号]
  * @param hash_table    哈希表
  * @param key           待获取项键
+ * @return              指定项信息
  */
-void get_item_from_table(hash_table_t *hash_table, uint64_t key) {
+staff_info_t *get_item_from_table(hash_table_t *hash_table, uint64_t key) {
     entry_node_t *node = NULL;
     if (!find_item_from_table(hash_table, key, &node, NULL)) {
         LOG_C(LOG_ERROR, "Failed to get item for not here.");
-        return;
+        return NULL;
     }
-    print_staff_info(key, node->value);
+    return node->value;
 }
 
 /**
  * @brief               从哈希表获取指定项[匹配指定信息]
  * @param hash_table    哈希表
  * @param value         待匹配项
+ * @param count         匹配成功项个数地址
+ * @return              匹配成功项信息
  */
-void get_items_by_info(hash_table_t *hash_table, staff_info_t *value) {
-    if (hash_table == NULL || value == NULL) {
-        return;
+staff_info_t **get_items_by_info(hash_table_t *hash_table, staff_info_t *value, uint64_t *count) {
+    if (hash_table == NULL || value == NULL || count == NULL) {
+        return NULL;
     }
     
-    uint64_t count = 0;
+    *count = 0;
+    staff_info_t **info = calloc(1, sizeof(staff_info_t *)*hash_table->count);
+    if (info == NULL) {
+        return NULL;
+    }
+
     // 遍历输出所有匹配项，无序输出
     for (uint64_t i = 0; i < hash_table->bucket_count; ++i) {
         hash_bucket_t *bucket = &hash_table->buckets[i];
         entry_node_t *current_node = bucket->head;
         while (current_node != NULL) {
             if (is_value_equal(value, current_node->value)) {
-                print_staff_info(current_node->key, current_node->value);
-                count++;
+                info[*count] = current_node->value;
+                (*count)++;
             }
             current_node = current_node->next;
         }
     }
 
-    if (count == 0) {
+    if (*count == 0) {
         LOG_C(LOG_ERROR, "No matching items found.");
     }
+    return info;
 }
 
 /**
  * @brief 遍历输出所有项信息
+ * @param count 总个数地址
+ * @return      所有项信息
  */
-void print_all_of_table(hash_table_t *hash_table) {
+staff_info_t **get_all_items_of_table(hash_table_t *hash_table, uint64_t *count) {
     if (hash_table == NULL) {
-        return;
+        return NULL;
+    }
+
+    *count = 0;
+    staff_info_t **info = calloc(1, sizeof(staff_info_t *)*hash_table->count);
+    if (info == NULL) {
+        return NULL;
     }
 
     for (uint64_t i = 0; i < hash_table->bucket_count; ++i) {
         hash_bucket_t *bucket = &hash_table->buckets[i];
         entry_node_t *current_node = bucket->head;
         while (current_node != NULL) {
-            print_staff_info(current_node->key, current_node->value);
+            info[*count] = current_node->value;
+            (*count)++;
             current_node = current_node->next;
         }
     }
+
+    return info;
 }

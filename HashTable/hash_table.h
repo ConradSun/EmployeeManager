@@ -12,27 +12,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <strings.h>
-
-#define FREE(ptr)   if (ptr != NULL) {free(ptr); ptr = NULL;}
-
-/**
- * @brief 日期
- */
-typedef struct {
-    uint16_t year;
-    uint8_t month;
-    uint8_t day;
-} short_date_t;
-
-/**
- * @brief 员工信息
- */
-typedef struct {
-    char *name;
-    short_date_t date;
-    char *department;
-    char *position;
-} staff_info_t;
+#include "common.h"
 
 /**
  * @brief 哈希表链表结点
@@ -67,9 +47,8 @@ hash_table_t *enlarge_hash_table(hash_table_t *old_table);
 bool add_item_to_table(hash_table_t **hash_table, uint64_t key, staff_info_t *value, bool is_copy);
 bool remove_item_from_table(hash_table_t *hash_table, uint64_t key);
 bool modify_item_from_table(hash_table_t *hash_table, uint64_t key, staff_info_t *value);
-void get_item_from_table(hash_table_t *hash_table, uint64_t key);
-void get_items_by_info(hash_table_t *hash_table, staff_info_t *value);
-
-void print_all_of_table(hash_table_t *hash_table);
+staff_info_t *get_item_from_table(hash_table_t *hash_table, uint64_t key);
+staff_info_t **get_items_by_info(hash_table_t *hash_table, staff_info_t *value, uint64_t *count);
+staff_info_t **get_all_items_of_table(hash_table_t *hash_table, uint64_t *count);
 
 #endif /* hash_table_h */
