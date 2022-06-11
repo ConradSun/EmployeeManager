@@ -34,10 +34,10 @@ typedef struct {
  * @brief 哈希表
  */
 typedef struct {
-    uint64_t count;
-    uint64_t max_size;
-    uint64_t bucket_count;
-    hash_bucket_t *buckets;
+    uint64_t count;         // 当前数量
+    uint64_t max_size;      // 最大容量
+    uint64_t bucket_count;  // 桶数量
+    hash_bucket_t *buckets; // 桶数组
 } hash_table_t;
 
 hash_table_t *create_hash_table(uint64_t max_size);

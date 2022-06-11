@@ -17,18 +17,6 @@ static const uint16_t buffer_size = 1024;           // 输入缓存大小
 static char input_msg[buffer_size] = {'\0'};        // 输入缓存
 
 /**
-* @brief 指令类型描述
-*/
-static const char *cmd_str[] = {
-    [ADD]   = "ADD",
-    [DEL]   = "DEL",
-    [MOD]   = "MOD",
-    [GET]   = "GET",
-    [HELP]  = "HELP",
-    [EXIT]  = "EXIT",
-};
-
-/**
 * @brief 信息类型描述
 */
 static const char *type_str[] = {
@@ -145,7 +133,7 @@ user_command_t parse_input_command(char *string) {
     // 指令大小写不敏感
     string_to_upper(string);
     for (uint8_t i = NUL + 1; i < MAX_CMD; ++i) {
-        if (strcmp(string, cmd_str[i]) == 0) {
+        if (strcmp(string, g_cmd_infos[i].name) == 0) {
             cmd = i;
             break;
         }
@@ -298,7 +286,7 @@ void parse_input_messgae(void) {
         }
         return;
     }
-    
+
     // 获取员工工号
     start = index;
     index = get_split_site(input_msg + start, &space_count) + start;

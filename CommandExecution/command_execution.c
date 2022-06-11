@@ -10,9 +10,8 @@
 #include "log.h"
 
 static const uint16_t default_hash_size = 1024;     // 默认哈希表容量
-hash_table_t *s_hash_table = NULL;                  // 哈希表
-
-typedef void (*execute_command_t)(uint64_t, staff_info_t *, bool, sort_type_t); // 执行指令函数指针
+static hash_table_t *s_hash_table = NULL;           // 哈希表
+command_info_t g_cmd_infos[MAX_CMD];                // 指令操作信息
 
 /**
  * @brief           比较员工工号
@@ -25,8 +24,8 @@ static int compare_staff_id(const void *staff1, const void *staff2) {
         return 0;
     }
 
-    staff_info_t *info1 = staff1;
-    staff_info_t *info2 = staff2;
+    staff_info_t *info1 = (staff_info_t *)staff1;
+    staff_info_t *info2 = (staff_info_t *)staff2;
     return info1->job_number - info2->job_number;
 }
 
@@ -41,8 +40,8 @@ static int compare_staff_date(const void *staff1, const void *staff2) {
         return 0;
     }
 
-    staff_info_t *info1 = staff1;
-    staff_info_t *info2 = staff2;
+    staff_info_t *info1 = (staff_info_t *)staff1;
+    staff_info_t *info2 = (staff_info_t *)staff2;
     uint16_t diff = info1->date.year - info2->date.year;
     if (diff == 0) {
         diff = info1->date.month - info2->date.month;
@@ -173,6 +172,37 @@ static void get_employee(uint64_t job_number, staff_info_t *info, bool is_opt_al
 }
 
 /**
+ * @brief 初始化所有指令信息
+ */
+void init_all_cmd_info(void) {
+    bzero(g_cmd_infos, sizeof(g_cmd_infos));
+    g_cmd_infos[ADD].name = "ADD";
+    g_cmd_infos[ADD].func = add_employee;
+    g_cmd_infos[ADD].usage = "Use ADD cmd to add a staff to the database.\n"
+        "\te.g. ADD 10086 name:Zhangsan date:2022-05-11 dept:ZTA pos:engineer\n";
+
+    g_cmd_infos[DEL].name = "DEL";
+    g_cmd_infos[DEL].func = del_employee;
+    g_cmd_infos[DEL].usage = "Use DEL cmd to remove a/all staff from the database.\n"
+        "\te.g. DEL 10086 to remove a staff, or DEL * to clear the database.\n";
+
+    g_cmd_infos[MOD].name = "MOD";
+    g_cmd_infos[MOD].func = mod_employee;
+    g_cmd_infos[MOD].usage = "Use MOD cmd to modify a staff's info.\n"
+        "\te.g. MOD 10086 dept:CWPP name:Lisi\n";
+
+    g_cmd_infos[GET].name = "GET";
+    g_cmd_infos[GET].func = get_employee;
+    g_cmd_infos[GET].usage = "Use GET cmd to obtain a/all staff's info.\n"
+        "\te.g. GET 10086 to obtain a staff's info, or GET name:Lisi dept:ZTA to obtain one or more staff's info, "
+        "or GET * to print all staff's info.\n"
+        "\tIf you want output being sorted, use --sort:xx, e.g. GET --sort:id * to sort output by staff id.";
+
+    g_cmd_infos[HELP].name = "HELP";
+    g_cmd_infos[EXIT].name = "EXIT";
+}
+
+/**
  * @brief               执行输入指令
  * @param command       指令
  * @param job_number    工号
@@ -181,32 +211,19 @@ static void get_employee(uint64_t job_number, staff_info_t *info, bool is_opt_al
  * @param type          排序方式[仅DGET指令支持]
  */
 void execute_input_command(user_command_t command, uint64_t job_number, staff_info_t *info, bool is_opt_all, sort_type_t type) {
-    execute_command_t exec_cmd = NULL;
+    command_info_t *cmd_info = NULL;
     switch (command) {
         case ADD:
-            exec_cmd = add_employee;
-            break;
         case DEL:
-            exec_cmd = del_employee;
-            break;
         case MOD:
-            exec_cmd = mod_employee;
-            break;
         case GET:
-            exec_cmd = get_employee;
+            cmd_info = &g_cmd_infos[command];
             break;
             
         case HELP:
-            LOG_O("Use ADD cmd to add a staff to the database.\n"
-                    "\te.g. ADD 10086 name:Zhangsan date:2022-05-11 dept:ZTA pos:engineer\n"
-                    "Use DEL cmd to remove a/all staff from the database.\n"
-                    "\te.g. DEL 10086 to remove a staff, or DEL * to clear the database.\n"
-                    "Use MOD cmd to modify a staff's info.\n"
-                    "\te.g. MOD 10086 dept:CWPP name:Lisi\n"
-                    "Use GET cmd to obtain a/all staff's info.\n"
-                    "\te.g. GET 10086 to obtain a staff's info, or GET name:Lisi dept:ZTA to obtain one or more staff's info, "
-                    "or GET * to print all staff's info.\n"
-                    "\tIf you want output being sorted, use --sort:xx, e.g. GET --sort:id * to sort output by staff id.")
+            for (user_command_t i = NUL+1; i < MAX_CMD-2; i++) {
+                LOG_O("%s", g_cmd_infos[i].usage)
+            }
             return;
         case EXIT:
             if (s_hash_table != NULL) {
@@ -220,5 +237,5 @@ void execute_input_command(user_command_t command, uint64_t job_number, staff_in
             return;
     }
 
-    exec_cmd(job_number, info, is_opt_all, type);
+    cmd_info->func(job_number, info, is_opt_all, type);
 }
