@@ -6,6 +6,8 @@
 //
 
 #include "command_parser.h"
+#include "hash_table.h"
+#include "em_log.h"
 
 static fd_set input_set = {0};                      // 标准输入管理
 static const uint16_t default_hash_size = 1024;     // 默认哈希表容量
@@ -14,7 +16,7 @@ static const uint8_t max_cmd_size = 5;              // 最大指令长度
 static const uint16_t buffer_size = 1024;           // 输入缓存大小
 static char input_msg[buffer_size] = {'\0'};        // 输入缓存
 
-HashTable *g_hash_table = NULL;                     // 哈希表
+hash_table_t *s_hash_table = NULL;                  // 哈希表
 
 /**
 * @brief 指令类型描述
@@ -117,7 +119,7 @@ bool get_input_message(void) {
     FD_SET(STDIN_FILENO, &input_set);
     int result = select(1, &input_set, NULL, NULL, NULL);
     if (result < 0) {
-        printf("Failed to select input fd.\n");
+        LOG_C(LOG_ERROR, "Failed to select input fd.")
         return false;
     }
     
@@ -136,12 +138,12 @@ bool get_input_message(void) {
  * @param string    待解析字符串
  * @return          指令
  */
-Command parse_input_command(char *string) {
+user_command_t parse_input_command(char *string) {
     if (string == NULL) {
         return NUL;
     }
     
-    Command cmd = NUL;
+    user_command_t cmd = NUL;
     // 指令大小写不敏感
     string_to_upper(string);
     for (uint8_t i = NUL + 1; i < MAX_CMD; ++i) {
@@ -160,7 +162,7 @@ Command parse_input_command(char *string) {
  * @param info      信息填充地址
  * @return          false表示解析失败，否则为成功
  */
-bool parse_staff_info(const char *string, StaffInfo *info) {
+bool parse_staff_info(const char *string, staff_info_t *info) {
     if (string == NULL) {
         return false;
     }
@@ -193,7 +195,7 @@ bool parse_staff_info(const char *string, StaffInfo *info) {
         case DATE:
             // 后面补充日期格式校验
             if (size - end != date_str_size) {
-                printf("Invalid date\n");
+                LOG_C(LOG_ERROR, "Input date is invalid.")
                 return false;
             }
             info->date.year = (string[end] - '0') * 1000 + (string[end+1] - '0') * 100 + (string[end+2] - '0') * 10 + (string[end+3] - '0');
@@ -221,53 +223,61 @@ bool parse_staff_info(const char *string, StaffInfo *info) {
  * @param info          员工信息
  * @param is_opt_all    全局操作标志[仅DEL、GET指令支持]
  */
-void process_input_command(Command command, uint64_t job_number, StaffInfo *info, bool is_opt_all) {
+void process_input_command(user_command_t command, uint64_t job_number, staff_info_t *info, bool is_opt_all) {
     switch (command) {
         case ADD:
-            if (add_item_to_table(&g_hash_table, job_number, info, true)) {
-                printf("The staff [%llu] is added.\n", job_number);
+            if (s_hash_table == NULL) {
+                s_hash_table = create_hash_table(default_hash_size);
+                if (s_hash_table == NULL) {
+                    break;
+                }
+            }
+            if (add_item_to_table(&s_hash_table, job_number, info, true)) {
+                LOG_C(LOG_INFO, "The staff [%llu] is added.", job_number)
             }
             break;
         case DEL:
             if (is_opt_all) {
-                delete_hash_table(&g_hash_table);
-                g_hash_table = create_hash_table(default_hash_size);
-                printf("The database is deleted.\n");
+                delete_hash_table(&s_hash_table);
+                s_hash_table = create_hash_table(default_hash_size);
+                LOG_C(LOG_INFO, "The database is deleted.")
             }
             else {
-                if (remove_item_from_table(g_hash_table, job_number)) {
-                    printf("The staff [%llu] is removed.\n", job_number);
+                if (remove_item_from_table(s_hash_table, job_number)) {
+                    LOG_C(LOG_INFO, "The staff [%llu] is removed.", job_number)
                 }
             }
             break;
         case MOD:
-            if (modify_item_from_table(g_hash_table, job_number, info)) {
-                printf("Info of the staff [%llu] is modified.\n", job_number);
+            if (modify_item_from_table(s_hash_table, job_number, info)) {
+                LOG_C(LOG_INFO, "Info of the staff [%llu] is modified.", job_number)
             }
             break;
         case GET:
             if (is_opt_all) {
-                print_all_of_table(g_hash_table);
+                print_all_of_table(s_hash_table);
             }
             else {
                 if (job_number > 0) {
-                    get_item_from_table(g_hash_table, job_number);
+                    get_item_from_table(s_hash_table, job_number);
                 }
                 else {
-                    get_items_by_info(g_hash_table, info);
+                    get_items_by_info(s_hash_table, info);
                 }
             }
             break;
             
         case HELP:
-            printf("Use ADD cmd to add a staff to the database.\n\te.g. ADD 10086 name:Zhangsan date:2022-05-11 dept:ZTA pos:engineer\n"
+            LOG_C(LOG_INFO, "Use ADD cmd to add a staff to the database.\n\te.g. ADD 10086 name:Zhangsan date:2022-05-11 dept:ZTA pos:engineer\n"
                    "Use DEL cmd to remove a/all staff from the database.\n\te.g. DEL 10086 to remove a staff, or DEL * to clear the database.\n"
                    "Use MOD cmd to modify a staff's info.\n\te.g. MOD 10086 dept:CWPP name:Lisi\n"
-                   "Use GET cmd to obtain a/all staff's info.\n\te.g. GET 10086 to obtain a staff's info, or GET name:Lisi dept:ZTA to obtain on or more staff's info, or GET * to print all staff's info.\n");
+                   "Use GET cmd to obtain a/all staff's info.\n\te.g. GET 10086 to obtain a staff's info, or GET name:Lisi dept:ZTA to obtain on or more staff's info, or GET * to print all staff's info.\n")
             break;
         case EXIT:
-            printf("Process is over, now quit.\n");
-            delete_hash_table(&g_hash_table);
+            if (s_hash_table != NULL) {
+                delete_hash_table(&s_hash_table);
+            }
+            LOG_C(LOG_INFO, "Process is over, now quit.")
             exit(0);
             break;
             
@@ -284,9 +294,9 @@ void process_input_command(Command command, uint64_t job_number, StaffInfo *info
  * @brief 解析输入信息
  */
 void parse_input_messgae(void) {
-    Command command = NUL;
+    user_command_t command = NUL;
     uint64_t job_number = 0;
-    StaffInfo info = {0};
+    staff_info_t info = {0};
     
     char message[buffer_size] = {'\0'}; // 待解析字符串
     size_t size = strlen(input_msg);    // 原始输入大小
@@ -298,7 +308,7 @@ void parse_input_messgae(void) {
     index = get_split_site(input_msg, &space_count);
     start += space_count;
     if (index == -1 || (index - space_count) >= max_cmd_size) {
-        printf("Input is invalid [too long command].\n");
+        LOG_C(LOG_ERROR, "Input is invalid [too long command].")
         return;
     }
     index++;
@@ -306,7 +316,7 @@ void parse_input_messgae(void) {
     command = parse_input_command(message);
     bzero(message, buffer_size);
     if (command == NUL) {
-        printf("Input is invalid [unknown command].\n");
+        LOG_C(LOG_ERROR, "Input is invalid [unknown command].")
         return;
     }
     
@@ -316,7 +326,7 @@ void parse_input_messgae(void) {
             process_input_command(command, job_number, &info, true);
         }
         else {
-            printf("Input is invalid ['*' should be followed by a line break].\n");
+            LOG_C(LOG_ERROR, "Input is invalid ['*' should be followed by a line break].")
         }
         return;
     }
@@ -326,7 +336,7 @@ void parse_input_messgae(void) {
     index = get_split_site(input_msg + start, &space_count) + start;
     start += space_count;
     if (index == -1) {
-        printf("Input is invalid [invalid job number].\n");
+        LOG_C(LOG_ERROR, "Input is invalid [invalid job number].")
         return;
     }
     index++;
@@ -344,7 +354,7 @@ void parse_input_messgae(void) {
         index = get_split_site(input_msg + start, &space_count) + start;
         start += space_count;
         if (index == -1) {
-            printf("Input is invalid [invalid staff info].\n");
+            LOG_C(LOG_ERROR, "Input is invalid [invalid staff info].")
             break;
         }
         index++;

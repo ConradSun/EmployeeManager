@@ -8,11 +8,11 @@
 #ifndef command_parser_h
 #define command_parser_h
 
-#include "hash_table.h"
 #include <unistd.h>
+#include <stdbool.h>
 
 /**
- * @brief 有效指令
+ * @brief 有效用户指令
  */
 typedef enum {
     NUL,
@@ -25,7 +25,7 @@ typedef enum {
     HELP,
     EXIT,
     MAX_CMD
-} Command;
+} user_command_t;
 
 /**
  * @brief 员工信息类型
@@ -36,9 +36,7 @@ typedef enum {
     DEPT,
     POS,
     MAX_TYPE
-} InfoType;
-
-extern HashTable *g_hash_table;
+} info_type_t;
 
 bool get_input_message(void);
 void parse_input_messgae(void);

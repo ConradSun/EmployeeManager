@@ -10,7 +10,7 @@
 #include <unistd.h>
 
 void test_hash_table(void) {
-    StaffInfo common_value = {
+    staff_info_t common_value = {
         .name = "sunkang",
         .date = {
             .year = 2022,
@@ -21,28 +21,26 @@ void test_hash_table(void) {
         .position = "developer"
     };
     
-    g_hash_table = create_hash_table(1024);
+    hash_table_t *hash_table = create_hash_table(1024);
     for (uint64_t key = 1; key < 100001; key++) {
-        add_item_to_table(&g_hash_table, key, &common_value, true);
+        add_item_to_table(&hash_table, key, &common_value, true);
     }
-    printf("count: %llu\n", g_hash_table->count);
+    printf("count: %llu\n", hash_table->count);
     
-    get_item_from_table(g_hash_table, 1022);
+    get_item_from_table(hash_table, 1022);
     common_value.date.day = 30;
-    modify_item_from_table(g_hash_table, 1022, &common_value);
-    get_item_from_table(g_hash_table, 1022);
+    modify_item_from_table(hash_table, 1022, &common_value);
+    get_item_from_table(hash_table, 1022);
     
     for (uint64_t key = 1; key < 50001; key++) {
-        remove_item_from_table(g_hash_table, key);
+        remove_item_from_table(hash_table, key);
     }
-    printf("delete 50000, count: %llu\n", g_hash_table->count);
+    printf("delete 50000, count: %llu\n", hash_table->count);
     
-    delete_hash_table(&g_hash_table);
+    delete_hash_table(&hash_table);
 }
 
 int main(int argc, const char * argv[]) {
-    g_hash_table = create_hash_table(1024);
-    
     bool is_msg_in = false;
     while (true) {
         is_msg_in = get_input_message();

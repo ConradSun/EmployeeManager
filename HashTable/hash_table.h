@@ -22,33 +22,33 @@ typedef struct {
     uint16_t year;
     uint8_t month;
     uint8_t day;
-} Date;
+} short_date_t;
 
 /**
  * @brief 员工信息
  */
 typedef struct {
     char *name;
-    Date date;
+    short_date_t date;
     char *department;
     char *position;
-} StaffInfo;
+} staff_info_t;
 
 /**
  * @brief 哈希表链表结点
  */
-typedef struct _Node {
-    uint64_t key;       // 员工工号，查询关键字
-    StaffInfo *value;   // 员工信息
-    struct _Node *next;
-} Node;
+typedef struct entry_node {
+    uint64_t key;           // 员工工号，查询关键字
+    staff_info_t *value;    // 员工信息
+    struct entry_node *next;
+} entry_node_t;
 
 /**
  * @brief 哈希桶
  */
 typedef struct {
-    Node *head;
-} Bucket;
+    entry_node_t *head;
+} hash_bucket_t;
 
 /**
  * @brief 哈希表
@@ -57,19 +57,19 @@ typedef struct {
     uint64_t count;
     uint64_t max_size;
     uint64_t bucket_count;
-    Bucket *buckets;
-} HashTable;
+    hash_bucket_t *buckets;
+} hash_table_t;
 
-HashTable *create_hash_table(uint64_t max_size);
-void delete_hash_table(HashTable **hash_table);
-HashTable *enlarge_hash_table(HashTable *old_table);
+hash_table_t *create_hash_table(uint64_t max_size);
+void delete_hash_table(hash_table_t **hash_table);
+hash_table_t *enlarge_hash_table(hash_table_t *old_table);
 
-bool add_item_to_table(HashTable **hash_table, uint64_t key, StaffInfo *value, bool is_copy);
-bool remove_item_from_table(HashTable *hash_table, uint64_t key);
-bool modify_item_from_table(HashTable *hash_table, uint64_t key, StaffInfo *value);
-void get_item_from_table(HashTable *hash_table, uint64_t key);
-void get_items_by_info(HashTable *hash_table, StaffInfo *value);
+bool add_item_to_table(hash_table_t **hash_table, uint64_t key, staff_info_t *value, bool is_copy);
+bool remove_item_from_table(hash_table_t *hash_table, uint64_t key);
+bool modify_item_from_table(hash_table_t *hash_table, uint64_t key, staff_info_t *value);
+void get_item_from_table(hash_table_t *hash_table, uint64_t key);
+void get_items_by_info(hash_table_t *hash_table, staff_info_t *value);
 
-void print_all_of_table(HashTable *hash_table);
+void print_all_of_table(hash_table_t *hash_table);
 
 #endif /* hash_table_h */
