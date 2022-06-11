@@ -11,37 +11,48 @@
 
 static const uint16_t default_hash_size = 1024;     // 默认哈希表容量
 hash_table_t *s_hash_table = NULL;                  // 哈希表
-sort_type_t s_sort_type = SORT_NONE;                // 排序方式
 
 typedef void (*execute_command_t)(uint64_t, staff_info_t *, bool, sort_type_t); // 执行指令函数指针
 
 /**
- * @brief       比较员工信息
- * @param info1 员工1
- * @param info1 员工2
- * @return      比较结果
+ * @brief           比较员工工号
+ * @param staff1    员工1
+ * @param staff1    员工2
+ * @return          比较结果
  */
-static int compare_staff_info(const staff_info_t *info1, const staff_info_t *info2) {
-    if (info1 == NULL || info2 == NULL) {
+static int compare_staff_id(const void *staff1, const void *staff2) {
+    if (staff1 == NULL || staff2 == NULL) {
         return 0;
     }
 
-    if (s_sort_type == SORT_ID) {
-        return info1->job_number - info2->job_number;
-    }
-    if (s_sort_type == SORT_DATE) {
-        uint16_t diff = info1->date.year - info2->date.year;
-        if (diff == 0) {
-            diff = info1->date.month - info2->date.month;
-            if (diff == 0) {
-                diff = info1->date.day - info2->date.day;
-            }
-        }
-        return diff;
+    staff_info_t *info1 = staff1;
+    staff_info_t *info2 = staff2;
+    return info1->job_number - info2->job_number;
+}
+
+/**
+ * @brief           比较员工入职日期
+ * @param staff1    员工1
+ * @param staff1    员工2
+ * @return          比较结果
+ */
+static int compare_staff_date(const void *staff1, const void *staff2) {
+    if (staff1 == NULL || staff2 == NULL) {
+        return 0;
     }
 
-    return 0;
+    staff_info_t *info1 = staff1;
+    staff_info_t *info2 = staff2;
+    uint16_t diff = info1->date.year - info2->date.year;
+    if (diff == 0) {
+        diff = info1->date.month - info2->date.month;
+        if (diff == 0) {
+            diff = info1->date.day - info2->date.day;
+        }
+    }
+    return diff;
 }
+
 /**
  * @brief       打印指定员工信息
  * @param value 员工信息
@@ -50,7 +61,9 @@ static void print_a_staff_info(staff_info_t *value) {
     if (value == NULL) {
         return;
     }
-    LOG_O("job_number: %llu, name: %s, date: %04d-%02d-%02d, department: %s, position: %s.", value->job_number, value->name, value->date.year, value->date.month, value->date.day, value->department, value->position)
+    LOG_O("job_number: %llu, name: %s, date: %04d-%02d-%02d, department: %s, position: %s.", \
+    value->job_number, value->name, value->date.year, value->date.month, value->date.day, \
+    value->department, value->position)
 }
 
 /**
@@ -63,9 +76,16 @@ static void print_staffs_info(staff_info_t **values, uint64_t count, sort_type_t
         return;
     }
 
-    s_sort_type = type;
-    if (type == SORT_ID) {
-        qsort(values, count, sizeof(staff_info_t *), compare_staff_info);
+    switch (type) {
+        case SORT_ID:
+            qsort(values, count, sizeof(staff_info_t *), compare_staff_id);
+            break;
+        case SORT_DATE:
+            qsort(values, count, sizeof(staff_info_t *), compare_staff_date);
+            break;
+
+        default:
+            break;
     }
 
     for (uint64_t i = 0; i < count; i++) {
@@ -177,10 +197,16 @@ void execute_input_command(user_command_t command, uint64_t job_number, staff_in
             break;
             
         case HELP:
-            LOG_O("Use ADD cmd to add a staff to the database.\n\te.g. ADD 10086 name:Zhangsan date:2022-05-11 dept:ZTA pos:engineer\n"
-                   "Use DEL cmd to remove a/all staff from the database.\n\te.g. DEL 10086 to remove a staff, or DEL * to clear the database.\n"
-                   "Use MOD cmd to modify a staff's info.\n\te.g. MOD 10086 dept:CWPP name:Lisi\n"
-                   "Use GET cmd to obtain a/all staff's info.\n\te.g. GET 10086 to obtain a staff's info, or GET name:Lisi dept:ZTA to obtain on or more staff's info, or GET * to print all staff's info.\n")
+            LOG_O("Use ADD cmd to add a staff to the database.\n"
+                    "\te.g. ADD 10086 name:Zhangsan date:2022-05-11 dept:ZTA pos:engineer\n"
+                    "Use DEL cmd to remove a/all staff from the database.\n"
+                    "\te.g. DEL 10086 to remove a staff, or DEL * to clear the database.\n"
+                    "Use MOD cmd to modify a staff's info.\n"
+                    "\te.g. MOD 10086 dept:CWPP name:Lisi\n"
+                    "Use GET cmd to obtain a/all staff's info.\n"
+                    "\te.g. GET 10086 to obtain a staff's info, or GET name:Lisi dept:ZTA to obtain one or more staff's info, "
+                    "or GET * to print all staff's info.\n"
+                    "\tIf you want output being sorted, use --sort:xx, e.g. GET --sort:id * to sort output by staff id.")
             return;
         case EXIT:
             if (s_hash_table != NULL) {
