@@ -11,13 +11,10 @@
 #include <unistd.h>
 
 int main(int argc, const char * argv[]) {
-    bool is_msg_in = false;
     init_all_cmd_info();
     while (true) {
-        is_msg_in = get_input_message();
-        if (is_msg_in) {
-            parse_input_messgae();
-        }
+        get_input_message();
+        parse_input_messgae();
     }
     
     return 0;

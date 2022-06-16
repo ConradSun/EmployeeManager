@@ -25,7 +25,7 @@ static int compare_staff_id(const void *staff1, const void *staff2) {
         LOG_C(LOG_DEBUG, "The staff's info is empty.")
         return 0;
     }
-    
+
     staff_info_t *info1 = *(staff_info_t **)staff1;
     staff_info_t *info2 = *(staff_info_t **)staff2;
     return info1->staff_id - info2->staff_id;
@@ -189,11 +189,11 @@ void init_all_cmd_info(void) {
     g_cmd_infos[GET].usage = "Use GET cmd to obtain a/all staff's info.\n"
         "\te.g. GET 10086 to obtain a staff's info, or GET name:Lisi dept:ZTA to obtain one or more staff's info, "
         "or GET * to print all staff's info.\n"
-        "\tIf you want output being sorted, use --sort:xx, e.g. GET --sort:id * to sort output by staff id.";
+        "\tIf you want output being sorted, use --sort:xx, e.g. GET --sort:id * to sort output by staff id.\n";
 
     g_cmd_infos[LOG].name = "LOG";
     g_cmd_infos[LOG].usage = "Use LOG cmd to set log level.\n"
-        "\te.g. LOG debug to set log level to debug. Log level include [debug, info, error, fault, off].";
+        "\te.g. LOG debug to set log level to debug. Log level include [debug, info, error, fault, off].\n";
     g_cmd_infos[HELP].name = "HELP";
     g_cmd_infos[EXIT].name = "EXIT";
 }
@@ -222,6 +222,7 @@ void execute_input_command(user_command_t command, staff_info_t *info, bool is_o
             for (user_command_t i = NUL+1; i <= LOG; ++i) {
                 LOG_O("%s", g_cmd_infos[i].usage)
             }
+            LOG_O("The above commands are not case sensitive.\n")
             return;
         case EXIT:
             if (s_hash_table != NULL) {

@@ -13,7 +13,7 @@
 #include <stdbool.h>
 #include <string.h>
 
-bool get_input_message(void);
+void get_input_message(void);
 void parse_input_messgae(void);
 
 #endif /* command_parser_h */

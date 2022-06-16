@@ -9,9 +9,8 @@
 #include "command_execution.h"
 #include "common.h"
 #include "log.h"
+#include <ctype.h>
 
-static fd_set input_set = {0};                      // 标准输入管理
-static const uint8_t date_str_size = 10;            // 日期字符串大小
 static const uint8_t max_cmd_size = 5;              // 最大指令长度
 static const uint16_t buffer_size = 1024;           // 输入缓存大小
 static char input_msg[buffer_size] = {'\0'};        // 输入缓存
@@ -69,6 +68,35 @@ static bool is_string_prefix(const char *string, const char *prefix) {
     }
     for (size_t i = 0; i < pre_len; ++i) {
         if (string[i] != prefix[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * @brief           判断字符串是否为合法日期格式
+ * @param string    待判断字符串
+ * @return          false表示非法，否则为合法
+ */
+static bool is_date_valid(const char *string) {
+    uint8_t date_str_size = 10;     // 日期字符串大小
+    uint8_t year_split_site = 4;    // 分隔符位置1
+    uint8_t month_split_site = 7;   // 分隔符位置2
+    size_t str_len = strlen(string);
+    
+    if (str_len != date_str_size) {
+        return false;
+    }
+    if (string[year_split_site] != '-' || string[month_split_site] != '-') {
+        return false;
+    }
+
+    for (size_t i = 0; i < str_len; ++i) {
+        if (i == year_split_site || month_split_site) {
+            continue;
+        }
+        if (isdigit(string[i]) == 0) {
             return false;
         }
     }
@@ -188,8 +216,7 @@ static bool parse_staff_info(const char *string, staff_info_t *info) {
             info->name = strndup(string + end, size - end);
             break;
         case DATE:
-            // TODO后面补充日期格式校验
-            if (size - end != date_str_size) {
+            if (!is_date_valid(string + end)) {
                 LOG_C(LOG_ERROR, "Input date is invalid.")
                 return false;
             }
@@ -355,26 +382,10 @@ static int parse_input_info(const char *input, staff_info_t *info) {
 }
 
 /**
- * @brief   获取终端输入信息
- * @return  false表示获取失败，否则为成功
+ * @brief 获取终端输入信息
  */
-bool get_input_message(void) {
-    FD_ZERO(&input_set);
-    FD_SET(STDIN_FILENO, &input_set);
-    int result = select(1, &input_set, NULL, NULL, NULL);
-    if (result < 0) {
-        LOG_C(LOG_ERROR, "Failed to select input fd.")
-        return false;
-    }
-    
-    if (!FD_ISSET(STDIN_FILENO, &input_set)) {
-        return false;
-    }
-    
-    bzero(input_msg, buffer_size);
+void get_input_message(void) {
     fgets(input_msg, buffer_size, stdin);
-    
-    return true;
 }
 
 /**
@@ -401,7 +412,7 @@ void parse_input_messgae(void) {
     if (index < 0) {
         goto END;
     }
-    if (command == LOG) {
+    if (command == LOG || is_opt_all) {
         goto EXEC;
     }
 
