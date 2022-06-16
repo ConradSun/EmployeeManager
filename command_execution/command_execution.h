@@ -23,6 +23,7 @@ typedef enum {
     MOD,    // 改
     GET,    // 查
     
+    LOG,    // 日志
     HELP,   // 帮助
     EXIT,   // 退出
     MAX_CMD
@@ -48,7 +49,7 @@ typedef enum {
     SORT_DATE,  // 按日期排序
 } sort_type_t;
 
-typedef void (*execute_func_t)(uint64_t, staff_info_t *, bool, sort_type_t); // 执行指令函数指针
+typedef void (*execute_func_t)(staff_info_t *, bool, sort_type_t);  // 执行指令函数指针
 
 /**
  * @brief 指令信息
@@ -63,6 +64,6 @@ typedef struct{
 extern command_info_t g_cmd_infos[];
 
 void init_all_cmd_info(void);
-void execute_input_command(user_command_t command, uint64_t job_number, staff_info_t *info, bool is_opt_all, sort_type_t type);
+void execute_input_command(user_command_t command, staff_info_t *info, bool is_opt_all, sort_type_t type);
 
 #endif /* command_execution_h */

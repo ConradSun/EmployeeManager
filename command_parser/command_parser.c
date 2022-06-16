@@ -19,11 +19,22 @@ static char input_msg[buffer_size] = {'\0'};        // 输入缓存
 /**
 * @brief 信息类型描述
 */
-static const char *type_str[] = {
+static const char *info_type_str[] = {
     [NAME]  = "name",
     [DATE]  = "date",
     [DEPT]  = "dept",
     [POS]   = "pos",
+};
+
+/**
+* @brief 日志类型描述
+*/
+static const char *log_level_str[] = {
+    [LOG_OFF]   = "off",
+    [LOG_FAULT] = "fault",
+    [LOG_ERROR] = "error",
+    [LOG_INFO]  = "info",
+    [LOG_DEBUG] = "debug",
 };
 
 /**
@@ -97,57 +108,11 @@ static int get_split_site(const char *string, int *space_count) {
 }
 
 /**
- * @brief   获取终端输入信息
- * @return  false表示获取失败，否则为成功
- */
-bool get_input_message(void) {
-    FD_ZERO(&input_set);
-    FD_SET(STDIN_FILENO, &input_set);
-    int result = select(1, &input_set, NULL, NULL, NULL);
-    if (result < 0) {
-        LOG_C(LOG_ERROR, "Failed to select input fd.")
-        return false;
-    }
-    
-    if (!FD_ISSET(STDIN_FILENO, &input_set)) {
-        return false;
-    }
-    
-    bzero(input_msg, buffer_size);
-    fgets(input_msg, buffer_size, stdin);
-    
-    return true;
-}
-
-/**
- * @brief           解析输入指令
- * @param string    待解析字符串
- * @return          指令
- */
-user_command_t parse_input_command(char *string) {
-    if (string == NULL) {
-        return NUL;
-    }
-    
-    user_command_t cmd = NUL;
-    // 指令大小写不敏感
-    string_to_upper(string);
-    for (uint8_t i = NUL + 1; i < MAX_CMD; ++i) {
-        if (strcmp(string, g_cmd_infos[i].name) == 0) {
-            cmd = i;
-            break;
-        }
-    }
-    
-    return cmd;
-}
-
-/**
  * @brief           解析排序方式
  * @param string    待解析字符串
  * @return          排序方式
  */
-sort_type_t parse_sort_type(const char *string) {
+static sort_type_t parse_sort_type(const char *string) {
     char sort_begin[] = "--sort:";
     uint8_t begin = strlen(sort_begin);
     char id[] = "id";
@@ -158,9 +123,11 @@ sort_type_t parse_sort_type(const char *string) {
     }
     if (is_string_prefix(string, sort_begin)) {
         if (strcmp(string+begin, id) == 0) {
+            LOG_C(LOG_DEBUG, "Sort by staff id.")
             return SORT_ID;
         }
         if (strcmp(string+begin, date) == 0) {
+            LOG_C(LOG_DEBUG, "Sort by date.")
             return SORT_DATE;
         }
     }
@@ -169,12 +136,28 @@ sort_type_t parse_sort_type(const char *string) {
 }
 
 /**
+ * @brief           解析日志等级
+ * @param string    待解析字符串
+ * @return          false表示解析失败，否则为成功
+ */
+static bool parse_log_level(const char *string) {
+    for (uint8_t i = LOG_OFF; i <= LOG_DEBUG; ++i) {
+        if (is_string_prefix(string, log_level_str[i])) {
+            g_log_level = i;
+            LOG_C(LOG_DEBUG, "Now log level is [%s].", log_level_str[i])
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
  * @brief           解析员工信息
  * @param string    待解析字符串
  * @param info      信息填充地址
  * @return          false表示解析失败，否则为成功
  */
-bool parse_staff_info(const char *string, staff_info_t *info) {
+static bool parse_staff_info(const char *string, staff_info_t *info) {
     if (string == NULL) {
         return false;
     }
@@ -184,8 +167,8 @@ bool parse_staff_info(const char *string, staff_info_t *info) {
     size_t end = 0;
     // 匹配信息字符串前缀，获取有效信息类型
     for (uint8_t i = NAME; i < MAX_TYPE; ++i) {
-        if (is_string_prefix(string, type_str[i])) {
-            size_t len = strlen(type_str[i]);
+        if (is_string_prefix(string, info_type_str[i])) {
+            size_t len = strlen(info_type_str[i]);
             if (string[len] == ':') {
                 end = len + 1;
                 type = i;
@@ -205,7 +188,7 @@ bool parse_staff_info(const char *string, staff_info_t *info) {
             info->name = strndup(string + end, size - end);
             break;
         case DATE:
-            // 后面补充日期格式校验
+            // TODO后面补充日期格式校验
             if (size - end != date_str_size) {
                 LOG_C(LOG_ERROR, "Input date is invalid.")
                 return false;
@@ -229,98 +212,207 @@ bool parse_staff_info(const char *string, staff_info_t *info) {
 }
 
 /**
- * @brief 解析输入信息
+ * @brief           解析输入指令
+ * @param input     待解析字符串
+ * @param command   指令
+ * @return          -1表示解析失败，否则为解析位置
  */
-void parse_input_messgae(void) {
-    user_command_t command = NUL;
-    uint64_t job_number = 0;
-    staff_info_t info = {0};
-    bool is_opt_all = false;
-    sort_type_t sort_type = SORT_NONE;
-    
+static int parse_input_command(const char *input, user_command_t *command) {
     char message[buffer_size] = {'\0'}; // 待解析字符串
-    size_t size = strlen(input_msg);    // 原始输入大小
     size_t start = 0;                   // 待解析串起点
     int index = 0;                      // 当前解析位置
     int space_count = 0;                // 待解析串前空格数量
-    
-    // 获取操作指令
-    index = get_split_site(input_msg, &space_count);
+
+    index = get_split_site(input, &space_count);
     start += space_count;
     if (index == -1 || (index - space_count) >= max_cmd_size) {
         LOG_C(LOG_ERROR, "Input is invalid [too long command].")
-        return;
+        return -1;
     }
     index++;
-    strlcpy(message, input_msg + start, index - start);
-    command = parse_input_command(message);
-    bzero(message, buffer_size);
-    if (command == NUL) {
-        LOG_C(LOG_ERROR, "Input is invalid [unknown command].")
-        return;
+    strlcpy(message, input + start, index - start);
+
+    // 指令大小写不敏感
+    string_to_upper(message);
+    for (uint8_t i = NUL + 1; i < MAX_CMD; ++i) {
+        if (strcmp(message, g_cmd_infos[i].name) == 0) {
+            *command = i;
+            LOG_C(LOG_DEBUG, "Input command is [%s].", g_cmd_infos[i].name)
+            break;
+        }
     }
+    if (*command == NUL) {
+        LOG_C(LOG_ERROR, "Input is invalid [unknown command].")
+        return -1;
+    }
+    
+    return index;
+}
+
+/**
+ * @brief               解析输入标识
+ * @param input         待解析字符串
+ * @param command       指令
+ * @param is_opt_all    全局操作标志
+ * @param sort_type     排序方式
+ * @return              -1表示解析失败，否则为解析位置
+ */
+static int parse_input_flags(const char *input, user_command_t command, bool *is_opt_all, sort_type_t *sort_type) {
+    char message[buffer_size] = {'\0'}; // 待解析字符串
+    size_t start = 0;                   // 待解析串起点
+    int index = 0;                      // 当前解析位置
+    int space_count = 0;                // 待解析串前空格数量
 
     // 检查--sort标志
-    if (command == GET && input_msg[index] == '-') {
+    if (command == GET && input[index] == '-') {
         start = index;
-        index = get_split_site(input_msg + start, &space_count) + start;
+        index = get_split_site(input + start, &space_count) + start;
         start += space_count;
         if (index == -1) {
             LOG_C(LOG_ERROR, "Input is invalid [invalid job number].")
-            return;
+            return -1;
         }
         index++;
-        strlcpy(message, input_msg + start, index - start);
-        sort_type = parse_sort_type(message);
+        strlcpy(message, input + start, index - start);
+        *sort_type = parse_sort_type(message);
         bzero(message, buffer_size);
     }
     
     // 检查*通配符
-    if ((command == DEL || command == GET) && input_msg[index] == '*') {
-        if (input_msg[index+1] == '\n') {
-            is_opt_all = true;
-            goto END;
+    if ((command == DEL || command == GET) && input[index] == '*') {
+        if (input[index+1] == '\n') {
+            *is_opt_all = true;
+            LOG_C(LOG_DEBUG, "Flag of Operating all is found.")
+            return index;
         }
         else {
             LOG_C(LOG_ERROR, "Input is invalid ['*' should be followed by a line break].")
+            return -1;
         }
-        return;
     }
+
+    // 检查log级别
+    if (command == LOG) {
+        if (parse_log_level(input)) {
+            return index;
+        }
+        else {
+            LOG_C(LOG_ERROR, "Input is invalid [unknown log level].")
+            return -1;
+        }
+    }
+
+    return index;
+}
+
+/**
+ * @brief       解析输入员工信息
+ * @param input 待解析字符串
+ * @param info  员工信息
+ * @return      -1表示解析失败，否则为解析位置
+ */
+static int parse_input_info(const char *input, staff_info_t *info) {
+    char message[buffer_size] = {'\0'}; // 待解析字符串
+    size_t start = 0;                   // 待解析串起点
+    int index = 0;                      // 当前解析位置
+    int space_count = 0;                // 待解析串前空格数量
+    size_t size = strlen(input);    // 原始输入大小
 
     // 获取员工工号
     start = index;
-    index = get_split_site(input_msg + start, &space_count) + start;
+    index = get_split_site(input + start, &space_count) + start;
     start += space_count;
     if (index == -1) {
         LOG_C(LOG_ERROR, "Input is invalid [invalid job number].")
-        return;
+        return -1;
     }
     index++;
-    strlcpy(message, input_msg + start, index - start);
-    job_number = atoi(message);
+    strlcpy(message, input + start, index - start);
+    info->staff_id = atoi(message);
     // 当前输入不含工号，则解析为员工信息
-    if (job_number == 0) {
+    if (info->staff_id == 0) {
         index = start;
     }
+    LOG_C(LOG_DEBUG, "Staff id is [%llu].", info->staff_id)
     bzero(message, buffer_size);
     
     // 获取员工信息
     while (index < size) {
         start = index;
-        index = get_split_site(input_msg + start, &space_count) + start;
+        index = get_split_site(input + start, &space_count) + start;
         start += space_count;
         if (index == -1) {
             LOG_C(LOG_ERROR, "Input is invalid [invalid staff info].")
             break;
         }
         index++;
-        strlcpy(message, input_msg + start, index - start);
-        parse_staff_info(message, &info);
+        strlcpy(message, input + start, index - start);
+        parse_staff_info(message, info);
         bzero(message, buffer_size);
     }
+
+    return index;
+}
+
+/**
+ * @brief   获取终端输入信息
+ * @return  false表示获取失败，否则为成功
+ */
+bool get_input_message(void) {
+    FD_ZERO(&input_set);
+    FD_SET(STDIN_FILENO, &input_set);
+    int result = select(1, &input_set, NULL, NULL, NULL);
+    if (result < 0) {
+        LOG_C(LOG_ERROR, "Failed to select input fd.")
+        return false;
+    }
     
+    if (!FD_ISSET(STDIN_FILENO, &input_set)) {
+        return false;
+    }
+    
+    bzero(input_msg, buffer_size);
+    fgets(input_msg, buffer_size, stdin);
+    
+    return true;
+}
+
+/**
+ * @brief 解析输入信息
+ */
+void parse_input_messgae(void) {
+    user_command_t command = NUL;       // 用户指令
+    staff_info_t info = {0};            // 员工信息
+    bool is_opt_all = false;            // 操作全部标志
+    sort_type_t sort_type = SORT_NONE;  // 排序类型
+    int index = 0;                      // 当前解析位置
+    
+    // 获取操作指令
+    index = parse_input_command(input_msg, &command);
+    if (index < 0) {
+        goto END;
+    }
+    if (command == HELP || command == EXIT) {
+        goto EXEC;
+    }
+
+    // 获取操作标志
+    index += parse_input_flags(input_msg+index, command, &is_opt_all, &sort_type);
+    if (index < 0) {
+        goto END;
+    }
+    if (command == LOG) {
+        goto EXEC;
+    }
+
+    index += parse_input_info(input_msg+index, &info);
+    if (index < 0) {
+        goto END;
+    }
+    
+EXEC:
+    execute_input_command(command, &info, is_opt_all, sort_type);
 END:
-    execute_input_command(command, job_number, &info, is_opt_all, sort_type);
     FREE(info.name)
     FREE(info.position)
     FREE(info.department)

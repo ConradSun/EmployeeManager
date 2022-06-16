@@ -12,6 +12,7 @@
 static const uint16_t default_hash_size = 1024;     // 默认哈希表容量
 static hash_table_t *s_hash_table = NULL;           // 哈希表
 command_info_t g_cmd_infos[MAX_CMD];                // 指令操作信息
+log_level_t g_log_level = LOG_ERROR;                // 当前日志等级[默认INFO级别]
 
 /**
  * @brief           比较员工工号
@@ -21,12 +22,13 @@ command_info_t g_cmd_infos[MAX_CMD];                // 指令操作信息
  */
 static int compare_staff_id(const void *staff1, const void *staff2) {
     if (staff1 == NULL || staff2 == NULL) {
+        LOG_C(LOG_DEBUG, "The staff's info is empty.")
         return 0;
     }
-
-    staff_info_t *info1 = (staff_info_t *)staff1;
-    staff_info_t *info2 = (staff_info_t *)staff2;
-    return info1->job_number - info2->job_number;
+    
+    staff_info_t *info1 = *(staff_info_t **)staff1;
+    staff_info_t *info2 = *(staff_info_t **)staff2;
+    return info1->staff_id - info2->staff_id;
 }
 
 /**
@@ -37,31 +39,27 @@ static int compare_staff_id(const void *staff1, const void *staff2) {
  */
 static int compare_staff_date(const void *staff1, const void *staff2) {
     if (staff1 == NULL || staff2 == NULL) {
+        LOG_C(LOG_DEBUG, "The staff's info is empty.")
         return 0;
     }
-
-    staff_info_t *info1 = (staff_info_t *)staff1;
-    staff_info_t *info2 = (staff_info_t *)staff2;
-    uint16_t diff = info1->date.year - info2->date.year;
-    if (diff == 0) {
-        diff = info1->date.month - info2->date.month;
-        if (diff == 0) {
-            diff = info1->date.day - info2->date.day;
-        }
-    }
-    return diff;
+    
+    staff_info_t *info1 = *(staff_info_t **)staff1;
+    staff_info_t *info2 = *(staff_info_t **)staff2;
+    uint64_t date1 = info1->date.year * 10000 + info1->date.month * 100 + info1->date.day;
+    uint64_t date2 = info2->date.year * 10000 + info2->date.month * 100 + info2->date.day;
+    return date1 - date2;
 }
 
 /**
  * @brief       打印指定员工信息
  * @param value 员工信息
  */
-static void print_a_staff_info(staff_info_t *value) {
+static void print_a_staff_info(const staff_info_t *value) {
     if (value == NULL) {
         return;
     }
-    LOG_O("job_number: %llu, name: %s, date: %04d-%02d-%02d, department: %s, position: %s.", \
-    value->job_number, value->name, value->date.year, value->date.month, value->date.day, \
+    LOG_O("staff id: %llu, name: %s, date: %04d-%02d-%02d, department: %s, position: %s.", \
+    value->staff_id, value->name, value->date.year, value->date.month, value->date.day, \
     value->department, value->position)
 }
 
@@ -74,6 +72,7 @@ static void print_staffs_info(staff_info_t **values, uint64_t count, sort_type_t
     if (values == NULL) {
         return;
     }
+    LOG_C(LOG_DEBUG, "Total [%llu] staffs meet the criteria.", count)
 
     switch (type) {
         case SORT_ID:
@@ -94,71 +93,67 @@ static void print_staffs_info(staff_info_t **values, uint64_t count, sort_type_t
 
 /**
  * @brief               新增员工
- * @param job_number    工号
  * @param info          员工信息
  * @param is_opt_all    全局操作标志[仅DEL、GET指令支持]
  * @param type          排序方式[仅DGET指令支持]
  */
-static void add_employee(uint64_t job_number, staff_info_t *info, bool is_opt_all, sort_type_t type) {
+static void add_employee(staff_info_t *info, bool is_opt_all, sort_type_t type) {
     if (s_hash_table == NULL) {
         s_hash_table = create_hash_table(default_hash_size);
         if (s_hash_table == NULL) {
             return;
         }
     }
-    if (add_item_to_table(&s_hash_table, job_number, info, true)) {
-        LOG_O("The staff [%llu] is added.", job_number)
+    if (add_item_to_table(&s_hash_table, info, true)) {
+        LOG_O("The staff [%llu] is added.", info->staff_id)
     }
 }
 
 /**
  * @brief               删除员工
- * @param job_number    工号
  * @param info          员工信息
  * @param is_opt_all    全局操作标志[仅DEL、GET指令支持]
  * @param type          排序方式[仅DGET指令支持]
  */
-static void del_employee(uint64_t job_number, staff_info_t *info, bool is_opt_all, sort_type_t type) {
+static void del_employee(staff_info_t *info, bool is_opt_all, sort_type_t type) {
     if (is_opt_all) {
         delete_hash_table(&s_hash_table);
         LOG_O("The database is deleted.")
     }
     else {
-        if (remove_item_from_table(s_hash_table, job_number)) {
-            LOG_O("The staff [%llu] is removed.", job_number)
+        if (remove_item_from_table(s_hash_table, info->staff_id)) {
+            LOG_O("The staff [%llu] is removed.", info->staff_id)
         }
     }
 }
 
 /**
  * @brief               修改员工信息
- * @param job_number    工号
  * @param info          员工信息
  * @param is_opt_all    全局操作标志[仅DEL、GET指令支持]
  * @param type          排序方式[仅DGET指令支持]
  */
-static void mod_employee(uint64_t job_number, staff_info_t *info, bool is_opt_all, sort_type_t type) {
-    if (modify_item_from_table(s_hash_table, job_number, info)) {
-        LOG_O("Info of the staff [%llu] is modified.", job_number)
+static void mod_employee(staff_info_t *info, bool is_opt_all, sort_type_t type) {
+    if (modify_item_from_table(s_hash_table, info)) {
+        LOG_O("Info of the staff [%llu] is modified.", info->staff_id)
     }
 }
 
 /**
  * @brief               获取员工信息
- * @param job_number    工号
  * @param info          员工信息
  * @param is_opt_all    全局操作标志[仅DEL、GET指令支持]
  * @param type          排序方式[仅DGET指令支持]
  */
-static void get_employee(uint64_t job_number, staff_info_t *info, bool is_opt_all, sort_type_t type) {
+static void get_employee(staff_info_t *info, bool is_opt_all, sort_type_t type) {
     if (is_opt_all) {
         uint64_t count = 0;
-        staff_info_t **staff_infos = get_all_items_of_table(s_hash_table, &count);
+        staff_info_t **staff_infos = get_all_items_from_table(s_hash_table, &count);
         print_staffs_info(staff_infos, count, type);
     }
     else {
-        if (job_number > 0) {
-            staff_info_t *staff_info = get_item_from_table(s_hash_table, job_number);
+        if (info->staff_id > 0) {
+            staff_info_t *staff_info = get_item_from_table(s_hash_table, info->staff_id);
             print_a_staff_info(staff_info);
         }
         else {
@@ -196,6 +191,9 @@ void init_all_cmd_info(void) {
         "or GET * to print all staff's info.\n"
         "\tIf you want output being sorted, use --sort:xx, e.g. GET --sort:id * to sort output by staff id.";
 
+    g_cmd_infos[LOG].name = "LOG";
+    g_cmd_infos[LOG].usage = "Use LOG cmd to set log level.\n"
+        "\te.g. LOG debug to set log level to debug. Log level include [debug, info, error, fault, off].";
     g_cmd_infos[HELP].name = "HELP";
     g_cmd_infos[EXIT].name = "EXIT";
 }
@@ -203,12 +201,11 @@ void init_all_cmd_info(void) {
 /**
  * @brief               执行输入指令
  * @param command       指令
- * @param job_number    工号
  * @param info          员工信息
  * @param is_opt_all    全局操作标志[仅DEL、GET指令支持]
  * @param type          排序方式[仅DGET指令支持]
  */
-void execute_input_command(user_command_t command, uint64_t job_number, staff_info_t *info, bool is_opt_all, sort_type_t type) {
+void execute_input_command(user_command_t command, staff_info_t *info, bool is_opt_all, sort_type_t type) {
     command_info_t *cmd_info = NULL;
     switch (command) {
         case ADD:
@@ -217,9 +214,12 @@ void execute_input_command(user_command_t command, uint64_t job_number, staff_in
         case GET:
             cmd_info = &g_cmd_infos[command];
             break;
-            
+
+        case LOG:
+              LOG_O("LOG level is setted.")
+              return;
         case HELP:
-            for (user_command_t i = NUL+1; i < MAX_CMD-2; i++) {
+            for (user_command_t i = NUL+1; i <= LOG; ++i) {
                 LOG_O("%s", g_cmd_infos[i].usage)
             }
             return;
@@ -235,5 +235,5 @@ void execute_input_command(user_command_t command, uint64_t job_number, staff_in
             return;
     }
 
-    cmd_info->func(job_number, info, is_opt_all, type);
+    cmd_info->func(info, is_opt_all, type);
 }

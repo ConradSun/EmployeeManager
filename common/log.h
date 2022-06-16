@@ -19,16 +19,13 @@ typedef enum {
     LOG_DEBUG,      // 调试信息
 } log_level_t;
 
-/**
-* @brief 当前日志等级
-*/
-#define LOG_LEVEL   LOG_INFO
+extern log_level_t g_log_level; // 当前日志等级
 
 /**
 * @brief 调试/测试日志接口
 */
 #define LOG_C(level, format, ...) \
-    if (LOG_LEVEL >= level) { \
+    if (g_log_level >= level) { \
         printf("%s %s:%d [-] " format "\n", \
             #level, __func__, __LINE__, ##__VA_ARGS__); \
     } \

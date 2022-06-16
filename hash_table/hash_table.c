@@ -43,7 +43,7 @@ static inline void clear_value(staff_info_t *value) {
  */
 static inline void copy_value(staff_info_t *dst_value, const staff_info_t *src_value) {
     if (dst_value != NULL && src_value != NULL) {
-        dst_value->job_number = src_value->job_number;
+        dst_value->staff_id = src_value->staff_id;
         if (src_value->date.year != 0) {
             dst_value->date = src_value->date;
         }
@@ -150,6 +150,7 @@ hash_table_t *create_hash_table(uint64_t max_size) {
         free(hash_table);
         return NULL;
     }
+    LOG_C(LOG_DEBUG, "Create hash table successfully.")
     
     return hash_table;
 }
@@ -179,6 +180,7 @@ void delete_hash_table(hash_table_t **hash_table) {
     FREE(table->buckets)
     FREE(table)
     *hash_table = NULL;
+    LOG_C(LOG_DEBUG, "Delete hash table successfully.")
 }
 
 /**
@@ -204,13 +206,14 @@ hash_table_t *enlarge_hash_table(hash_table_t *old_table) {
         entry_node_t *next_node = bucket->head;
         while (current_node != NULL) {
             next_node = current_node->next;
-            add_item_to_table(&new_table, current_node->key, current_node->value, false);
+            add_item_to_table(&new_table, current_node->value, false);
             FREE(current_node)
             current_node = next_node;
         }
     }
     FREE(old_table->buckets)
     FREE(old_table)
+    LOG_C(LOG_DEBUG, "Enlarge hash table successfully.")
     
     return new_table;
 }
@@ -255,19 +258,18 @@ static bool find_item_from_table(hash_table_t *hash_table, uint64_t key, entry_n
 /**
  * @brief               从哈希表添加项
  * @param hash_table    哈希表
- * @param key           待添加项键
  * @param value         待添加项值
  * @param is_copy       是否深拷贝值
  * @return              false表示失败，否则为成功
  */
-bool add_item_to_table(hash_table_t **hash_table, uint64_t key, staff_info_t *value, bool is_copy) {
-    if (hash_table == NULL || *hash_table == NULL || key == 0 || value == NULL) {
-        LOG_C(LOG_ERROR, "Failed to find item for invalid param.");
+bool add_item_to_table(hash_table_t **hash_table, staff_info_t *value, bool is_copy) {
+    if (hash_table == NULL || *hash_table == NULL || value == NULL) {
+        LOG_C(LOG_ERROR, "Failed to add item for invalid param.");
         return false;
     }
     
     hash_table_t *table = *hash_table;
-    if (find_item_from_table(table, key, NULL, NULL)) {
+    if (find_item_from_table(table, value->staff_id, NULL, NULL)) {
         LOG_C(LOG_ERROR, "Failed to add the item for already added.");
         return false;
     }
@@ -286,8 +288,7 @@ bool add_item_to_table(hash_table_t **hash_table, uint64_t key, staff_info_t *va
         return false;
     }
 
-    new_node->key = key;
-    value->job_number = key;
+    new_node->key = value->staff_id;
     if (is_copy) {
         new_node->value = calloc(1, sizeof(staff_info_t));
         copy_value(new_node->value, value);
@@ -296,7 +297,7 @@ bool add_item_to_table(hash_table_t **hash_table, uint64_t key, staff_info_t *va
         new_node->value = value;
     }
     
-    hash_bucket_t *bucket = &table->buckets[hash_code(key, table->bucket_count)];
+    hash_bucket_t *bucket = &table->buckets[hash_code(new_node->key, table->bucket_count)];
     // 头结点无值存储至头
     if (bucket->head == NULL) {
         bucket->head = new_node;
@@ -310,6 +311,7 @@ bool add_item_to_table(hash_table_t **hash_table, uint64_t key, staff_info_t *va
         tail_node->next = new_node;
     }
     table->count++;
+    LOG_C(LOG_DEBUG, "After adding, number of items in hash table is [%llu].", table->count)
     
     return true;
 }
@@ -340,6 +342,7 @@ bool remove_item_from_table(hash_table_t *hash_table, uint64_t key) {
     clear_value(current->value);
     FREE(current)
     hash_table->count--;
+    LOG_C(LOG_DEBUG, "After removing, number of items in hash table is [%llu].", hash_table->count)
     
     return true;
 }
@@ -347,13 +350,12 @@ bool remove_item_from_table(hash_table_t *hash_table, uint64_t key) {
 /**
  * @brief               从哈希表更新指定项
  * @param hash_table    哈希表
- * @param key           待更新项键
  * @param value         更新后值
  * @return              false表示失败，否则为成功
  */
-bool modify_item_from_table(hash_table_t *hash_table, uint64_t key, staff_info_t *value) {
+bool modify_item_from_table(hash_table_t *hash_table, staff_info_t *value) {
     entry_node_t *node = NULL;
-    if (!find_item_from_table(hash_table, key, &node, NULL)) {
+    if (!find_item_from_table(hash_table, value->staff_id, &node, NULL)) {
         LOG_C(LOG_ERROR, "Failed to modify item for not here.");
         return false;
     }
@@ -418,7 +420,7 @@ staff_info_t **get_items_by_info(hash_table_t *hash_table, staff_info_t *value, 
  * @param count 总个数地址
  * @return      所有项信息
  */
-staff_info_t **get_all_items_of_table(hash_table_t *hash_table, uint64_t *count) {
+staff_info_t **get_all_items_from_table(hash_table_t *hash_table, uint64_t *count) {
     if (hash_table == NULL) {
         return NULL;
     }

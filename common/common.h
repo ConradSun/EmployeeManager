@@ -26,7 +26,7 @@ typedef struct {
  * @brief 员工信息
  */
 typedef struct {
-    uint64_t job_number;    // 工号
+    uint64_t staff_id;      // 工号
     char *name;             // 姓名
     short_date_t date;      // 日期
     char *department;       // 部门
