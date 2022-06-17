@@ -6,15 +6,19 @@
 //
 
 #include "command_execution.h"
-#include "command_parser.h"
+#include "manager_server.h"
 #include "hash_table.h"
 #include <unistd.h>
 
 int main(int argc, const char * argv[]) {
     init_all_cmd_info();
+    if (!init_socket_server()) {
+        return -1;
+    }
+
     while (true) {
-        get_input_message();
-        parse_input_messgae();
+        process_connect_request();
+        process_all_queries();
     }
     
     return 0;

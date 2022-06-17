@@ -12,8 +12,8 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <string.h>
+#include "command_execution.h"
 
-void get_input_message(void);
-void parse_input_messgae(void);
+void process_input_messgae(user_request_t *user_request);
 
 #endif /* command_parser_h */

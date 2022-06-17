@@ -6,14 +6,11 @@
 //
 
 #include "command_parser.h"
-#include "command_execution.h"
 #include "common.h"
 #include "log.h"
 #include <ctype.h>
 
 static const uint8_t max_cmd_size = 5;              // 最大指令长度
-static const uint16_t buffer_size = 1024;           // 输入缓存大小
-static char input_msg[buffer_size] = {'\0'};        // 输入缓存
 
 /**
 * @brief 信息类型描述
@@ -124,9 +121,9 @@ static int get_split_site(const char *string, int *space_count) {
     }
     *space_count = index;
     
-    // 查找分隔符
+    // 查找分隔符[空格、换行、结束符]
     while (index < size) {
-        if (string[index] == ' ' || string[index] == '\n') {
+        if (string[index] == ' ' || string[index] == '\n' || string[index] == '\0') {
             return index;
         }
         index++;
@@ -245,7 +242,7 @@ static bool parse_staff_info(const char *string, staff_info_t *info) {
  * @return          -1表示解析失败，否则为解析位置
  */
 static int parse_input_command(const char *input, user_command_t *command) {
-    char message[buffer_size] = {'\0'}; // 待解析字符串
+    char message[BUFSIZ] = {'\0'};      // 待解析字符串
     size_t start = 0;                   // 待解析串起点
     int index = 0;                      // 当前解析位置
     int space_count = 0;                // 待解析串前空格数量
@@ -253,7 +250,7 @@ static int parse_input_command(const char *input, user_command_t *command) {
     index = get_split_site(input, &space_count);
     start += space_count;
     if (index == -1 || (index - space_count) >= max_cmd_size) {
-        LOG_C(LOG_ERROR, "Input is invalid [too long command].")
+        LOG_C(LOG_ERROR, "Input is invalid [invalid command] %d.", index)
         return -1;
     }
     index++;
@@ -277,21 +274,19 @@ static int parse_input_command(const char *input, user_command_t *command) {
 }
 
 /**
- * @brief               解析输入标识
- * @param input         待解析字符串
- * @param command       指令
- * @param is_opt_all    全局操作标志
- * @param sort_type     排序方式
- * @return              -1表示解析失败，否则为解析位置
+ * @brief       解析输入标识
+ * @param input 待解析字符串
+ * @param query 查询信息
+ * @return      -1表示解析失败，否则为解析位置
  */
-static int parse_input_flags(const char *input, user_command_t command, bool *is_opt_all, sort_type_t *sort_type) {
-    char message[buffer_size] = {'\0'}; // 待解析字符串
-    size_t start = 0;                   // 待解析串起点
-    int index = 0;                      // 当前解析位置
-    int space_count = 0;                // 待解析串前空格数量
+static int parse_input_flags(const char *input, query_info_t *query) {
+    char message[BUFSIZ] = {'\0'};  // 待解析字符串
+    size_t start = 0;               // 待解析串起点
+    int index = 0;                  // 当前解析位置
+    int space_count = 0;            // 待解析串前空格数量
 
     // 检查--sort标志
-    if (command == GET && input[index] == '-') {
+    if (query->command == GET && input[index] == '-') {
         start = index;
         index = get_split_site(input + start, &space_count) + start;
         start += space_count;
@@ -301,14 +296,14 @@ static int parse_input_flags(const char *input, user_command_t command, bool *is
         }
         index++;
         strlcpy(message, input + start, index - start);
-        *sort_type = parse_sort_type(message);
-        bzero(message, buffer_size);
+        query->sort_type = parse_sort_type(message);
+        bzero(message, BUFSIZ);
     }
     
     // 检查*通配符
-    if ((command == DEL || command == GET) && input[index] == '*') {
+    if ((query->command == DEL || query->command == GET) && input[index] == '*') {
         if (input[index+1] == '\n') {
-            *is_opt_all = true;
+            query->is_opt_all = true;
             LOG_C(LOG_DEBUG, "Flag of Operating all is found.")
             return index;
         }
@@ -319,7 +314,7 @@ static int parse_input_flags(const char *input, user_command_t command, bool *is
     }
 
     // 检查log级别
-    if (command == LOG) {
+    if (query->command == LOG) {
         if (parse_log_level(input)) {
             return index;
         }
@@ -339,11 +334,11 @@ static int parse_input_flags(const char *input, user_command_t command, bool *is
  * @return      -1表示解析失败，否则为解析位置
  */
 static int parse_input_info(const char *input, staff_info_t *info) {
-    char message[buffer_size] = {'\0'}; // 待解析字符串
+    char message[BUFSIZ] = {'\0'};      // 待解析字符串
     size_t start = 0;                   // 待解析串起点
     int index = 0;                      // 当前解析位置
     int space_count = 0;                // 待解析串前空格数量
-    size_t size = strlen(input);    // 原始输入大小
+    size_t size = strlen(input);        // 原始输入大小
 
     // 获取员工工号
     start = index;
@@ -361,7 +356,7 @@ static int parse_input_info(const char *input, staff_info_t *info) {
         index = start;
     }
     LOG_C(LOG_DEBUG, "Staff id is [%llu].", info->staff_id)
-    bzero(message, buffer_size);
+    bzero(message, BUFSIZ);
     
     // 获取员工信息
     while (index < size) {
@@ -375,54 +370,58 @@ static int parse_input_info(const char *input, staff_info_t *info) {
         index++;
         strlcpy(message, input + start, index - start);
         parse_staff_info(message, info);
-        bzero(message, buffer_size);
+        bzero(message, BUFSIZ);
     }
 
     return index;
 }
 
 /**
- * @brief 获取终端输入信息
+ * @brief               处理用户请求
+ * @param user_request  用户请求信息
  */
-void get_input_message(void) {
-    fgets(input_msg, buffer_size, stdin);
-}
+void process_input_messgae(user_request_t *user_request) {
+    if (user_request == NULL) {
+        return;
+    }
 
-/**
- * @brief 解析输入信息
- */
-void parse_input_messgae(void) {
-    user_command_t command = NUL;       // 用户指令
     staff_info_t info = {0};            // 员工信息
-    bool is_opt_all = false;            // 操作全部标志
-    sort_type_t sort_type = SORT_NONE;  // 排序类型
+    query_info_t query_info = {0};      // 查询详情
     int index = 0;                      // 当前解析位置
+
+    query_info.command = NUL;
+    query_info.info = &info;
+    query_info.is_opt_all = false;
+    query_info.sort_type = SORT_NONE;
     
     // 获取操作指令
-    index = parse_input_command(input_msg, &command);
+    index = parse_input_command(user_request->request, &query_info.command);
     if (index < 0) {
         goto END;
     }
-    if (command == HELP || command == EXIT) {
+    if (user_request->input_fd != STDIN_FILENO && query_info.command == EXIT) {
+        goto END;
+    }
+    if (query_info.command == HELP || query_info.command == EXIT) {
         goto EXEC;
     }
 
     // 获取操作标志
-    index += parse_input_flags(input_msg+index, command, &is_opt_all, &sort_type);
+    index += parse_input_flags(user_request->request+index, &query_info);
     if (index < 0) {
         goto END;
     }
-    if (command == LOG || is_opt_all) {
+    if (query_info.command == LOG || query_info.is_opt_all) {
         goto EXEC;
     }
 
-    index += parse_input_info(input_msg+index, &info);
+    index += parse_input_info(user_request->request+index, &info);
     if (index < 0) {
         goto END;
     }
     
 EXEC:
-    execute_input_command(command, &info, is_opt_all, sort_type);
+    execute_input_command(&query_info, user_request);
 END:
     FREE(info.name)
     FREE(info.position)

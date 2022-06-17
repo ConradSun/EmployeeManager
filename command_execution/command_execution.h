@@ -8,6 +8,7 @@
 #ifndef command_execution_h
 #define command_execution_h
 
+#include <stdio.h>
 #include <unistd.h>
 #include <stdbool.h>
 #include "common.h"
@@ -49,7 +50,27 @@ typedef enum {
     SORT_DATE,  // 按日期排序
 } sort_type_t;
 
-typedef void (*execute_func_t)(staff_info_t *, bool, sort_type_t);  // 执行指令函数指针
+/**
+ * @brief 用户请求处理
+ */
+typedef struct{
+    char request[BUFSIZ];   // 用户原始输入
+    char result[BUFSIZ];    // 用户查询结果
+    uint8_t input_fd;       // 输入描述符[0-stdin, >0-remote]
+    bool is_success;        // 请求处理成功标志
+} user_request_t;
+
+/**
+ * @brief 查询信息
+ */
+typedef struct{
+    user_command_t command; // 操作指令
+    staff_info_t *info;     // 员工信息
+    bool is_opt_all;        // 全局操作标志[仅DEL、GET指令支持]
+    sort_type_t sort_type;  // 排序方式[仅GET指令支持]
+} query_info_t;
+
+typedef void (*execute_func_t)(query_info_t *, user_request_t *);  // 执行指令函数指针
 
 /**
  * @brief 指令信息
@@ -64,6 +85,6 @@ typedef struct{
 extern command_info_t g_cmd_infos[];
 
 void init_all_cmd_info(void);
-void execute_input_command(user_command_t command, staff_info_t *info, bool is_opt_all, sort_type_t type);
+void execute_input_command(query_info_t *query, user_request_t *request);
 
 #endif /* command_execution_h */
