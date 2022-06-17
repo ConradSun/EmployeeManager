@@ -61,7 +61,7 @@ static void print_a_staff_info(const staff_info_t *value, char *output, size_t s
     if (value == NULL || output == NULL || size == 0) {
         return;
     }
-    snprintf(output, size, "staff id: %llu, name: %s, date: %04d-%02d-%02d, department: %s, position: %s.", \
+    snprintf(output, size, "staff id: %llu, name: %s, date: %04d-%02d-%02d, department: %s, position: %s.\n", \
     value->staff_id, value->name, value->date.year, value->date.month, value->date.day, \
     value->department, value->position);
 }
@@ -78,6 +78,7 @@ static void print_staffs_info(staff_info_t **values, uint64_t count, sort_type_t
         return;
     }
     size_t rest = 0;
+    size_t len = 0;
     LOG_C(LOG_DEBUG, "Total [%llu] staffs meet the criteria.", count)
 
     switch (type) {
@@ -93,8 +94,9 @@ static void print_staffs_info(staff_info_t **values, uint64_t count, sort_type_t
     }
 
     for (uint64_t i = 0; i < count; i++) {
-        rest = size - strlen(output);
-        print_a_staff_info(values[i], output, size);
+        len = strlen(output);
+        rest = size - len;
+        print_a_staff_info(values[i], output+len, rest);
     }
 }
 

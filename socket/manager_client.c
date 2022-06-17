@@ -12,6 +12,7 @@ static uint16_t server_port = 16166;    // 服务端绑定端口
 static fd_set client_set = {0};         // 服务端描述符集
 static int server_fd = -1;              // 服务端文件描述符
 static struct sockaddr_in server_addr;  // 服务端地址
+static char *server_ip = "127.0.0.1";   // 服务端ip
 log_level_t g_log_level = LOG_INFO;     // 当前日志等级[默认INFO级别]
 
 /**
@@ -19,7 +20,7 @@ log_level_t g_log_level = LOG_INFO;     // 当前日志等级[默认INFO级别]
  * @return  false表示失败，否则成功
  */
 bool create_server_socket(void) {
-    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_addr.s_addr = inet_addr(server_ip);
     server_addr.sin_family = AF_INET;
     server_addr.sin_len = sizeof(struct sockaddr_in);
     server_addr.sin_port = htons(server_port);
@@ -114,6 +115,9 @@ int main(int argc, const char *argv[]) {
     char input_msg[BUFSIZ];
     char output_msg[BUFSIZ];
 
+    if (argc >=2 && argv[1] != NULL) {
+        server_ip = (char *)argv[1];
+    }
     if (!create_server_socket()) {
         return -1;
     }

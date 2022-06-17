@@ -167,7 +167,7 @@ void process_remote_query(void) {
         }
 
         msg_size = msg_size > BUFSIZ ? BUFSIZ: msg_size;
-        LOG_O("%s", input_msg)
+        LOG_C(LOG_INFO, "%s", input_msg)
         process_user_query(input_msg, client_fd[i]);
         bzero(input_msg, BUFSIZ);
     }
