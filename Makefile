@@ -23,7 +23,7 @@ pre:
 CFLAGS += $(FLAG) -Wall -std=gnu11 -fstack-protector-strong
 INCLUDES = -Icommand_parser/ -Icommand_execution/ -Ihash_table/ -Isocket/ -Icommon/
 LIB_OBJS = $(OUTPUT)/hash_table.o
-SRV_OBJS = $(OUTPUT)/command_execution.o $(OUTPUT)/command_parser.o $(OUTPUT)/manager_server.o $(OUTPUT)/server_main.o
+SRV_OBJS = $(OUTPUT)/command_execution.o $(OUTPUT)/command_parser.o $(OUTPUT)/manager_server.o $(OUTPUT)/main.o
 CLT_OBJS = $(OUTPUT)/manager_client.o
 
 $(OUTPUT)/hash_table.o: hash_table/hash_table.c
@@ -42,7 +42,7 @@ $(OUTPUT)/command_parser.o: command_parser/command_parser.c
 $(OUTPUT)/manager_server.o: socket/manager_server.c
 	$(CC) -o $@ -c $^ $(INCLUDES) $(CFLAGS)
 
-$(OUTPUT)/server_main.o: socket/server_main.c
+$(OUTPUT)/main.o: main.c
 	$(CC) -o $@ -c $^ $(INCLUDES) $(CFLAGS)
 
 $(SRV): $(SRV_OBJS)
