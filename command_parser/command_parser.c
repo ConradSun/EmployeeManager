@@ -101,6 +101,21 @@ static bool is_date_valid(const char *string) {
 }
 
 /**
+ * @brief           判断字符串是否为合法姓名格式
+ * @param string    待判断字符串
+ * @return          false表示非法，否则为合法
+ */
+static bool is_name_valid(const char *string) {
+    size_t str_len = strlen(string);
+    for (size_t i = 0; i < str_len; ++i) {
+        if (isalpha(string[i]) == 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
  * @brief               获取分割符位置[空格或换行字符]
  * @param string        待处理字符串
  * @param space_count   无效空格数量
@@ -142,6 +157,10 @@ static sort_type_t parse_sort_type(const char *string) {
     uint8_t begin = strlen(sort_begin);
     char id[] = "id";
     char date[] = "date";
+    int space_count = 0;
+
+    get_split_site(string, &space_count);
+    string += space_count;
 
     if (string == NULL || strlen(string) <= strlen(sort_begin)) {
         return SORT_NONE;
@@ -166,6 +185,11 @@ static sort_type_t parse_sort_type(const char *string) {
  * @return          false表示解析失败，否则为成功
  */
 static bool parse_log_level(const char *string) {
+    int space_count = 0;
+
+    get_split_site(string, &space_count);
+    string += space_count;
+
     for (uint8_t i = LOG_OFF; i <= LOG_DEBUG; ++i) {
         if (is_string_prefix(string, log_level_str[i])) {
             g_log_level = i;
@@ -174,6 +198,29 @@ static bool parse_log_level(const char *string) {
         }
     }
     return false;
+}
+
+/**
+ * @brief           解析信息类型
+ * @param string    待解析字符串
+ * @return          false表示解析失败，否则为成功
+ */
+static info_type_t parse_info_type(const char *string, size_t *end) {
+    info_type_t type = TYPE_NONE;
+
+    // 匹配信息字符串前缀，获取有效信息类型
+    for (info_type_t i = NAME; i < MAX_TYPE; ++i) {
+        if (is_string_prefix(string, info_type_str[i])) {
+            size_t len = strlen(info_type_str[i]);
+            if (string[len] == ':') {
+                *end = len + 1;
+                type = i;
+            }
+            break;
+        }
+    }
+
+    return type;
 }
 
 /**
@@ -187,29 +234,24 @@ static bool parse_staff_info(const char *string, staff_info_t *info) {
         return false;
     }
     
-    int type = -1;
+    info_type_t type = TYPE_NONE;
     size_t size = strlen(string);
     size_t end = 0;
-    // 匹配信息字符串前缀，获取有效信息类型
-    for (uint8_t i = NAME; i < MAX_TYPE; ++i) {
-        if (is_string_prefix(string, info_type_str[i])) {
-            size_t len = strlen(info_type_str[i]);
-            if (string[len] == ':') {
-                end = len + 1;
-                type = i;
-                break;
-            }
-            else {
-                return false;
-            }
-        }
-    }
-    if (type == -1 || end >= size) {
+    int space_count = 0;
+
+    get_split_site(string, &space_count);
+    string += space_count;
+    type = parse_info_type(string, &end);
+    if (type == TYPE_NONE || end >= size) {
         return false;
     }
     
     switch (type) {
         case NAME:
+            if (!is_name_valid(string + end)) {
+                LOG_C(LOG_ERROR, "Input name is invalid.")
+                return false;
+            }
             info->name = strndup(string + end, size - end);
             break;
         case DATE:
@@ -250,7 +292,7 @@ static int parse_input_command(const char *input, user_command_t *command) {
     index = get_split_site(input, &space_count);
     start += space_count;
     if (index == -1 || (index - space_count) >= max_cmd_size) {
-        LOG_C(LOG_ERROR, "Input is invalid [invalid command] %d.", index)
+        LOG_C(LOG_ERROR, "Input is invalid [invalid command].")
         return -1;
     }
     index++;
@@ -369,7 +411,9 @@ static int parse_input_info(const char *input, staff_info_t *info) {
         }
         index++;
         strlcpy(message, input + start, index - start);
-        parse_staff_info(message, info);
+        if (!parse_staff_info(message, info)) {
+            return -1;
+        }
         bzero(message, BUFSIZ);
     }
 
@@ -388,6 +432,7 @@ void process_input_messgae(user_request_t *user_request) {
     staff_info_t info = {0};            // 员工信息
     query_info_t query_info = {0};      // 查询详情
     int index = 0;                      // 当前解析位置
+    int ret_idx = 0;
 
     query_info.command = NUL;
     query_info.info = &info;
@@ -407,8 +452,9 @@ void process_input_messgae(user_request_t *user_request) {
     }
 
     // 获取操作标志
-    index += parse_input_flags(user_request->request+index, &query_info);
-    if (index < 0) {
+    ret_idx = parse_input_flags(user_request->request+index, &query_info);
+    index += ret_idx;
+    if (ret_idx < 0) {
         goto END;
     }
     if (query_info.command == LOG || query_info.is_opt_all) {
@@ -416,8 +462,9 @@ void process_input_messgae(user_request_t *user_request) {
     }
 
     // 获取员工信息
-    index += parse_input_info(user_request->request+index, &info);
-    if (index < 0) {
+    ret_idx =  parse_input_info(user_request->request+index, &info);
+    index += ret_idx;
+    if (ret_idx < 0) {
         goto END;
     }
     

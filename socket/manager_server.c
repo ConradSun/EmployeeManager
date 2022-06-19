@@ -136,7 +136,10 @@ void process_local_query(void) {
     char input_msg[BUFSIZ] = {'\0'};
 
     if (FD_ISSET(STDIN_FILENO, &server_set)) {
-        fgets(input_msg, BUFSIZ, stdin);
+        if (fgets(input_msg, BUFSIZ, stdin) == NULL) {
+            LOG_O("Ignore EOF.")
+            return;
+        }
         process_user_query(input_msg, STDIN_FILENO);
     }
 }

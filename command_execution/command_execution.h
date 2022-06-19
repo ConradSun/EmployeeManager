@@ -34,6 +34,7 @@ typedef enum {
  * @brief 员工信息类型
  */
 typedef enum {
+    TYPE_NONE,
     NAME,   // 姓名
     DATE,   // 日期
     DEPT,   // 部门

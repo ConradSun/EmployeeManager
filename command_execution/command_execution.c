@@ -70,9 +70,8 @@ static void print_a_staff_info(const staff_info_t *value, char *output, size_t s
  * @param values    员工信息数组
  * @param count     数组大小
  * @param output    缓存数组
- * @param size      缓存大小
  */
-static void print_staffs_info(staff_info_t **values, uint64_t count, sort_type_t type, char *output, size_t size) {
+static void print_staffs_info(staff_info_t **values, uint64_t count, sort_type_t type, char *output) {
     if (values == NULL) {
         return;
     }
@@ -94,7 +93,7 @@ static void print_staffs_info(staff_info_t **values, uint64_t count, sort_type_t
 
     for (uint64_t i = 0; i < count; i++) {
         len = strlen(output);
-        rest = size - len;
+        rest = BUFSIZ - len;
         print_a_staff_info(values[i], output+len, rest);
     }
 }
@@ -167,7 +166,7 @@ static void get_employee(query_info_t *query, user_request_t *request) {
     if (query->is_opt_all) {
         uint64_t count = 0;
         staff_info_t **staff_infos = get_all_items_from_table(s_hash_table, &count);
-        print_staffs_info(staff_infos, count, query->sort_type, request->result, BUFSIZ);
+        print_staffs_info(staff_infos, count, query->sort_type, request->result);
     }
     else {
         if (query->info->staff_id > 0) {
@@ -177,7 +176,7 @@ static void get_employee(query_info_t *query, user_request_t *request) {
         else {
             uint64_t count = 0;
             staff_info_t **staff_infos = get_items_by_info(s_hash_table, query->info, &count);
-            print_staffs_info(staff_infos, count, query->sort_type, request->result, BUFSIZ);
+            print_staffs_info(staff_infos, count, query->sort_type, request->result);
         }
     }
     request->is_success = true;
