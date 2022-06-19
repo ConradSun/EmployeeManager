@@ -415,6 +415,7 @@ void process_input_messgae(user_request_t *user_request) {
         goto EXEC;
     }
 
+    // 获取员工信息
     index += parse_input_info(user_request->request+index, &info);
     if (index < 0) {
         goto END;

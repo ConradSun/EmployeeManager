@@ -20,7 +20,7 @@ static uint16_t server_port = 16166;        // 服务端绑定端口
 static fd_set server_set = {0};             // 服务端描述符集
 static int server_fd = -1;                  // 服务端文件描述符
 static struct sockaddr_in server_addr;      // 服务端地址
-static int client_fd[max_clients] = {0};    // 客户端文件描述符
+static int clients_fd[max_clients] = {0};   // 客户端文件描述符
 
 /**
  * @brief   创建服务端套接字
@@ -75,9 +75,9 @@ static bool is_message_available(int *max_fd) {
     *max_fd = *max_fd < server_fd ? server_fd : *max_fd;
 
     for (uint8_t i = 0; i < max_clients; ++i) {
-        if (client_fd[i] != 0) {
-            FD_SET(client_fd[i], &server_set);
-            *max_fd = *max_fd < client_fd[i] ? client_fd[i] : *max_fd;
+        if (clients_fd[i] != 0) {
+            FD_SET(clients_fd[i], &server_set);
+            *max_fd = *max_fd < clients_fd[i] ? clients_fd[i] : *max_fd;
         }
     }
     
@@ -148,18 +148,18 @@ void process_remote_query(void) {
     char input_msg[BUFSIZ] = {'\0'};
 
     for (uint8_t i = 0; i < max_clients; i++) {
-        if (client_fd[i] == 0 || !FD_ISSET(client_fd[i], &server_set)) {
+        if (clients_fd[i] == 0 || !FD_ISSET(clients_fd[i], &server_set)) {
             continue;
         }
 
-        int msg_size = recv(client_fd[i], input_msg, BUFSIZ, 0);
+        int msg_size = recv(clients_fd[i], input_msg, BUFSIZ, 0);
         if (msg_size < 0) {
             LOG_C(LOG_DEBUG, "Error occured in recviving message.")
             continue;
         }
         if (msg_size == 0) {
             LOG_C(LOG_INFO, "NO[%d] client is exited.", i)
-            client_fd[i] = 0;
+            clients_fd[i] = 0;
             continue;
         }
         if (strlen(input_msg) <= 1) {
@@ -168,7 +168,7 @@ void process_remote_query(void) {
 
         msg_size = msg_size > BUFSIZ ? BUFSIZ: msg_size;
         LOG_C(LOG_INFO, "%s", input_msg)
-        process_user_query(input_msg, client_fd[i]);
+        process_user_query(input_msg, clients_fd[i]);
         bzero(input_msg, BUFSIZ);
     }
 }
@@ -207,9 +207,9 @@ bool process_connect_request(void) {
     
     int index = -1;
     for (uint8_t i = 0; i < max_clients; i++) {
-        if (client_fd[i] == 0) {
+        if (clients_fd[i] == 0) {
             index = i;
-            client_fd[i] = temp_fd;
+            clients_fd[i] = temp_fd;
             break;
         }
     }
@@ -243,8 +243,8 @@ void process_all_queries(void) {
  */
 void destroy_all_connection(void) {
     for (uint8_t i = 0; i < max_clients; ++i) {
-        if (client_fd[i] != 0) {
-            close(client_fd[i]);
+        if (clients_fd[i] != 0) {
+            close(clients_fd[i]);
         }
     }
     close(server_fd);

@@ -9,8 +9,35 @@
 #include "common.h"
 #include "log.h"
 
-static const uint8_t per_bucket = 4;      // 哈希桶容量
-static const float enlarge_factor = 1.5;  // 扩容倍数
+/**
+ * @brief 哈希表链表结点
+ */
+typedef struct entry_node {
+    uint64_t key;           // 员工工号，查询关键字
+    staff_info_t *value;    // 员工信息
+    struct entry_node *next;
+} entry_node_t;
+
+/**
+ * @brief 哈希桶
+ */
+typedef struct {
+    entry_node_t *head;
+} hash_bucket_t;
+
+/**
+ * @brief 哈希表
+ */
+struct hash_table {
+    uint64_t count;         // 当前数量
+    uint64_t max_size;      // 最大容量
+    uint64_t bucket_count;  // 桶数量
+    hash_bucket_t *buckets; // 桶数组
+};
+
+static const uint8_t per_bucket = 4;        // 哈希桶容量
+static const float enlarge_factor = 1.5;    // 扩容倍数
+log_level_t g_log_level = LOG_INFO;         // 当前日志等级[默认INFO级别]
 
 /**
  * @brief               生成哈希值
@@ -369,7 +396,7 @@ bool modify_item_from_table(hash_table_t *hash_table, staff_info_t *value) {
  * @param key           待获取项键
  * @return              指定项信息
  */
-staff_info_t *get_item_from_table(hash_table_t *hash_table, uint64_t key) {
+staff_info_t *get_item_by_key(hash_table_t *hash_table, uint64_t key) {
     entry_node_t *node = NULL;
     if (!find_item_from_table(hash_table, key, &node, NULL)) {
         LOG_C(LOG_ERROR, "Failed to get item for not here.");

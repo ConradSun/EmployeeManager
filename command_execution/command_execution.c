@@ -13,7 +13,6 @@
 static const uint16_t default_hash_size = 1024;     // 默认哈希表容量
 static hash_table_t *s_hash_table = NULL;           // 哈希表
 command_info_t g_cmd_infos[MAX_CMD];                // 指令操作信息
-log_level_t g_log_level = LOG_INFO;                 // 当前日志等级[默认INFO级别]
 
 /**
  * @brief           比较员工工号
@@ -172,7 +171,7 @@ static void get_employee(query_info_t *query, user_request_t *request) {
     }
     else {
         if (query->info->staff_id > 0) {
-            staff_info_t *staff_info = get_item_from_table(s_hash_table, query->info->staff_id);
+            staff_info_t *staff_info = get_item_by_key(s_hash_table, query->info->staff_id);
             print_a_staff_info(staff_info, request->result, BUFSIZ);
         }
         else {
