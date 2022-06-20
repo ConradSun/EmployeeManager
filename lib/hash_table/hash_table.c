@@ -6,15 +6,14 @@
 //
 
 #include "hash_table.h"
-#include "common.h"
 #include "log.h"
 
 /**
  * @brief 哈希表链表结点
  */
 typedef struct entry_node {
-    uint64_t key;           // 员工工号，查询关键字
-    staff_info_t *value;    // 员工信息
+    uint64_t key;           // 主键
+    void *value;            // 映射信息
     struct entry_node *next;
 } entry_node_t;
 
@@ -30,9 +29,14 @@ typedef struct {
  */
 struct hash_table {
     uint64_t count;         // 当前数量
+    uint64_t value_size;    // 存储信息大小
     uint64_t max_size;      // 最大容量
     uint64_t bucket_count;  // 桶数量
     hash_bucket_t *buckets; // 桶数组
+
+    clear_value_callback clear_func;
+    copy_value_callback copy_func;
+    is_value_equal_callback match_func;
 };
 
 static const uint8_t per_bucket = 4;        // 哈希桶容量
@@ -51,117 +55,25 @@ static inline uint64_t hash_code(uint64_t key, uint64_t bucket_count) {
 }
 
 /**
- * @brief       清理存储值
- * @param value 待清理值
+ * @brief               创建哈希表
+ * @param max_size      最大容量
+ * @param value_size    存储信息大小
+ * @param clear_func    值清理函数
+ * @param copy_func     值拷贝函数
+ * @param match_func    值匹配函数
+ * @return              哈希表
  */
-static inline void clear_value(staff_info_t *value) {
-    if (value != NULL) {
-        FREE(value->name)
-        FREE(value->position)
-        FREE(value->department)
-        FREE(value)
-    }
-}
-
-/**
- * @brief           拷贝存储值
- * @param dst_value 拷贝至
- * @param src_value 拷贝于
- */
-static inline void copy_value(staff_info_t *dst_value, const staff_info_t *src_value) {
-    if (dst_value != NULL && src_value != NULL) {
-        dst_value->staff_id = src_value->staff_id;
-        if (src_value->date.year != 0) {
-            dst_value->date = src_value->date;
-        }
-        if (src_value->name != NULL) {
-            FREE(dst_value->name)
-            dst_value->name = strndup(src_value->name, strlen(src_value->name));
-        }
-        if (src_value->position != NULL) {
-            FREE(dst_value->position)
-            dst_value->position = strndup(src_value->position, strlen(src_value->position));
-        }
-        if (src_value->department != NULL) {
-            FREE(dst_value->department)
-            dst_value->department = strndup(src_value->department, strlen(src_value->department));
-        }
-    }
-}
-
-/**
- * @brief       比较日期是否相同
- * @param date1 日期1
- * @param date2 日期2
- * @return      false表示不同，否则为相同
- */
-static inline bool is_date_equal(short_date_t date1, short_date_t date2) {
-    // date1全0表示通配
-    if (date1.year == 0 && date1.month == 0 && date1.day == 0) {
-        return true;
+hash_table_t *create_hash_table(
+    uint64_t max_size, 
+    uint64_t value_size, 
+    clear_value_callback clear_func, 
+    copy_value_callback copy_func, 
+    is_value_equal_callback match_func) {
+    if (max_size == 0 || value_size == 0 || clear_func == NULL || copy_func == NULL || match_func == NULL) {
+        LOG_C(LOG_ERROR, "Failed to create hash table for invalid param.")
+        return NULL;
     }
 
-    if (date1.year == date2.year && date1.month == date2.month && date1.day == date2.day) {
-        return true;
-    }
-    return false;
-}
-
-/**
- * @brief           比较字符串是否相同
- * @param src_str   字符串1
- * @param dst_str   字符串2
- * @return          false表示不同，否则为相同
- */
-static bool is_string_equal(const char *src_str, const char *dst_str) {
-    // src_str为空表示通配
-    if (src_str != NULL) {
-        if (dst_str != NULL) {
-            if (strcmp(src_str, dst_str) != 0) {
-                return false;
-            }
-        }
-        else {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-/**
- * @brief           比较员工信息是否相同
- * @param src_value 信息1
- * @param dst_value 信息2
- * @return          false表示不同，否则为相同
- */
-static bool is_value_equal(const staff_info_t *src_value, const staff_info_t *dst_value) {
-    if (src_value == NULL || dst_value == NULL) {
-        return false;
-    }
-
-    if (!is_string_equal(src_value->name, dst_value->name)) {
-        return false;
-    }
-    if (!is_string_equal(src_value->department, dst_value->department)) {
-        return false;
-    }
-    if (!is_string_equal(src_value->position, dst_value->position)) {
-        return false;
-    }
-    if (!is_date_equal(src_value->date, dst_value->date)) {
-        return false;
-    }
-    
-    return true;
-}
-
-/**
- * @brief           创建哈希表
- * @param max_size  最大容量
- * @return          哈希表
- */
-hash_table_t *create_hash_table(uint64_t max_size) {
     hash_table_t *hash_table = calloc(1, sizeof(hash_table_t));
     if (hash_table == NULL) {
         LOG_C(LOG_ERROR, "Failed to calloc resources for creating hash table.")
@@ -169,12 +81,17 @@ hash_table_t *create_hash_table(uint64_t max_size) {
     }
     
     hash_table->max_size = max_size;
+    hash_table->value_size = value_size;
+    hash_table->clear_func = clear_func;
+    hash_table->copy_func = copy_func;
+    hash_table->match_func = match_func;
+
     // 保证桶数量为偶数个
     hash_table->bucket_count = (((max_size + per_bucket) / per_bucket) >> 1) << 1;
     hash_table->buckets = calloc(1, sizeof(hash_bucket_t) * hash_table->bucket_count);
     if (hash_table->buckets == NULL) {
         LOG_C(LOG_ERROR, "Failed to calloc resources for buckets.")
-        free(hash_table);
+        FREE(hash_table)
         return NULL;
     }
     LOG_C(LOG_DEBUG, "Create hash table successfully.")
@@ -199,7 +116,7 @@ void delete_hash_table(hash_table_t **hash_table) {
         entry_node_t *next_node = bucket->head;
         while (current_node != NULL) {
             next_node = current_node->next;
-            clear_value(current_node->value);
+            table->clear_func(current_node->value);
             FREE(current_node)
             current_node = next_node;
         }
@@ -221,7 +138,8 @@ hash_table_t *enlarge_hash_table(hash_table_t *old_table) {
         return NULL;
     }
     
-    hash_table_t *new_table = create_hash_table(old_table->max_size * enlarge_factor);
+    hash_table_t *new_table = create_hash_table(old_table->max_size*enlarge_factor, old_table->value_size, 
+        old_table->clear_func, old_table->copy_func, old_table->match_func);
     if (new_table == NULL) {
         return NULL;
     }
@@ -233,7 +151,7 @@ hash_table_t *enlarge_hash_table(hash_table_t *old_table) {
         entry_node_t *next_node = bucket->head;
         while (current_node != NULL) {
             next_node = current_node->next;
-            add_item_to_table(&new_table, current_node->value, false);
+            add_item_to_table(&new_table, current_node->key, current_node->value, false);
             FREE(current_node)
             current_node = next_node;
         }
@@ -254,11 +172,6 @@ hash_table_t *enlarge_hash_table(hash_table_t *old_table) {
  * @return              false表示失败，否则为成功
  */
 static bool find_item_from_table(hash_table_t *hash_table, uint64_t key, entry_node_t **current, entry_node_t **last) {
-    if (hash_table == NULL || key == 0) {
-        LOG_C(LOG_ERROR, "Failed to find item for invalid param.");
-        return false;
-    }
-    
     hash_bucket_t *bucket = &hash_table->buckets[hash_code(key, hash_table->bucket_count)];
     entry_node_t *temp_node = bucket->head;
     entry_node_t *last_node = bucket->head;
@@ -285,18 +198,19 @@ static bool find_item_from_table(hash_table_t *hash_table, uint64_t key, entry_n
 /**
  * @brief               从哈希表添加项
  * @param hash_table    哈希表
+ * @param key           主键
  * @param value         待添加项值
  * @param is_copy       是否深拷贝值
  * @return              false表示失败，否则为成功
  */
-bool add_item_to_table(hash_table_t **hash_table, staff_info_t *value, bool is_copy) {
-    if (hash_table == NULL || *hash_table == NULL || value == NULL) {
+bool add_item_to_table(hash_table_t **hash_table, uint64_t key, void *value, bool is_copy) {
+    if (hash_table == NULL || *hash_table == NULL || key == 0 || value == NULL) {
         LOG_C(LOG_ERROR, "Failed to add item for invalid param.");
         return false;
     }
     
     hash_table_t *table = *hash_table;
-    if (find_item_from_table(table, value->staff_id, NULL, NULL)) {
+    if (find_item_from_table(table, key, NULL, NULL)) {
         LOG_C(LOG_ERROR, "Failed to add the item for already added.");
         return false;
     }
@@ -315,10 +229,10 @@ bool add_item_to_table(hash_table_t **hash_table, staff_info_t *value, bool is_c
         return false;
     }
 
-    new_node->key = value->staff_id;
+    new_node->key = key;
     if (is_copy) {
-        new_node->value = calloc(1, sizeof(staff_info_t));
-        copy_value(new_node->value, value);
+        new_node->value = calloc(1, table->value_size);
+        table->copy_func(new_node->value, value);
     }
     else {
         new_node->value = value;
@@ -350,6 +264,11 @@ bool add_item_to_table(hash_table_t **hash_table, staff_info_t *value, bool is_c
  * @return              false表示失败，否则为成功
  */
 bool remove_item_from_table(hash_table_t *hash_table, uint64_t key) {
+    if (hash_table == NULL || key == 0) {
+        LOG_C(LOG_ERROR, "Failed to remove item for invalid param.");
+        return false;
+    }
+
     entry_node_t *current = NULL;
     entry_node_t *last = NULL;
     if (!find_item_from_table(hash_table, key, &current, &last)) {
@@ -366,7 +285,7 @@ bool remove_item_from_table(hash_table_t *hash_table, uint64_t key) {
     else {
         last->next = current->next;
     }
-    clear_value(current->value);
+    hash_table->clear_func(current->value);
     FREE(current)
     hash_table->count--;
     LOG_C(LOG_DEBUG, "After removing, number of items in hash table is [%llu].", hash_table->count)
@@ -377,16 +296,22 @@ bool remove_item_from_table(hash_table_t *hash_table, uint64_t key) {
 /**
  * @brief               从哈希表更新指定项
  * @param hash_table    哈希表
+ * @param key           主键
  * @param value         更新后值
  * @return              false表示失败，否则为成功
  */
-bool modify_item_from_table(hash_table_t *hash_table, staff_info_t *value) {
+bool modify_item_from_table(hash_table_t *hash_table, uint64_t key, void *value) {
+    if (hash_table == NULL || key == 0 || value == NULL) {
+        LOG_C(LOG_ERROR, "Failed to modify item for invalid param.");
+        return false;
+    }
+
     entry_node_t *node = NULL;
-    if (!find_item_from_table(hash_table, value->staff_id, &node, NULL)) {
+    if (!find_item_from_table(hash_table, key, &node, NULL)) {
         LOG_C(LOG_ERROR, "Failed to modify item for not here.");
         return false;
     }
-    copy_value(node->value, value);
+    hash_table->copy_func(node->value, value);
     return true;
 }
 
@@ -396,7 +321,12 @@ bool modify_item_from_table(hash_table_t *hash_table, staff_info_t *value) {
  * @param key           待获取项键
  * @return              指定项信息
  */
-staff_info_t *get_item_by_key(hash_table_t *hash_table, uint64_t key) {
+void *get_item_by_key(hash_table_t *hash_table, uint64_t key) {
+    if (hash_table == NULL || key == 0) {
+        LOG_C(LOG_ERROR, "Failed to get item for invalid param.");
+        return NULL;
+    }
+
     entry_node_t *node = NULL;
     if (!find_item_from_table(hash_table, key, &node, NULL)) {
         LOG_C(LOG_ERROR, "Failed to get item for not here.");
@@ -412,13 +342,13 @@ staff_info_t *get_item_by_key(hash_table_t *hash_table, uint64_t key) {
  * @param count         匹配成功项个数地址
  * @return              匹配成功项信息
  */
-staff_info_t **get_items_by_info(hash_table_t *hash_table, staff_info_t *value, uint64_t *count) {
+void **get_items_by_info(hash_table_t *hash_table, void *value, uint64_t *count) {
     if (hash_table == NULL || value == NULL || count == NULL) {
         return NULL;
     }
     
     *count = 0;
-    staff_info_t **info = calloc(1, sizeof(staff_info_t *)*hash_table->count);
+    void **info = calloc(1, sizeof(void *)*hash_table->count);
     if (info == NULL) {
         return NULL;
     }
@@ -428,7 +358,7 @@ staff_info_t **get_items_by_info(hash_table_t *hash_table, staff_info_t *value, 
         hash_bucket_t *bucket = &hash_table->buckets[i];
         entry_node_t *current_node = bucket->head;
         while (current_node != NULL) {
-            if (is_value_equal(value, current_node->value)) {
+            if (hash_table->match_func(value, current_node->value)) {
                 info[*count] = current_node->value;
                 (*count)++;
             }
@@ -447,13 +377,13 @@ staff_info_t **get_items_by_info(hash_table_t *hash_table, staff_info_t *value, 
  * @param count 总个数地址
  * @return      所有项信息
  */
-staff_info_t **get_all_items_from_table(hash_table_t *hash_table, uint64_t *count) {
-    if (hash_table == NULL) {
+void **get_all_items_from_table(hash_table_t *hash_table, uint64_t *count) {
+    if (hash_table == NULL || count == NULL) {
         return NULL;
     }
 
     *count = 0;
-    staff_info_t **info = calloc(1, sizeof(staff_info_t *)*hash_table->count);
+    void **info = calloc(1, sizeof(void *)*hash_table->count);
     if (info == NULL) {
         return NULL;
     }

@@ -8,10 +8,9 @@
 #ifndef command_execution_h
 #define command_execution_h
 
+#include "common.h"
 #include <stdio.h>
 #include <unistd.h>
-#include <stdbool.h>
-#include "common.h"
 
 /**
  * @brief 有效用户指令

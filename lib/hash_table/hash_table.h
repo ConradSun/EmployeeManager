@@ -11,20 +11,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <strings.h>
-#include "common.h"
+#include <string.h>
+
+#define FREE(ptr)   if (ptr != NULL) {free(ptr); ptr = NULL;}
 
 typedef struct hash_table hash_table_t;     // 哈希表
+typedef void(*clear_value_callback)(void *value);
+typedef void(*copy_value_callback)(void *dst, const void *src);
+typedef bool(*is_value_equal_callback)(const void *src, const void *dst);
 
-hash_table_t *create_hash_table(uint64_t max_size);
+hash_table_t *create_hash_table(uint64_t max_size, uint64_t value_size, clear_value_callback clear_func, copy_value_callback copy_func, is_value_equal_callback match_func);
 void delete_hash_table(hash_table_t **hash_table);
 hash_table_t *enlarge_hash_table(hash_table_t *old_table);
 
-bool add_item_to_table(hash_table_t **hash_table, staff_info_t *value, bool is_copy);
+bool add_item_to_table(hash_table_t **hash_table, uint64_t key, void *value, bool is_copy);
 bool remove_item_from_table(hash_table_t *hash_table, uint64_t key);
-bool modify_item_from_table(hash_table_t *hash_table, staff_info_t *value);
-staff_info_t *get_item_by_key(hash_table_t *hash_table, uint64_t key);
-staff_info_t **get_items_by_info(hash_table_t *hash_table, staff_info_t *value, uint64_t *count);
-staff_info_t **get_all_items_from_table(hash_table_t *hash_table, uint64_t *count);
+bool modify_item_from_table(hash_table_t *hash_table, uint64_t key, void *value);
+void *get_item_by_key(hash_table_t *hash_table, uint64_t key);
+void **get_items_by_info(hash_table_t *hash_table, void *value, uint64_t *count);
+void **get_all_items_from_table(hash_table_t *hash_table, uint64_t *count);
 
 #endif /* hash_table_h */

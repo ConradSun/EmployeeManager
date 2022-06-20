@@ -6,12 +6,11 @@
 //
 
 #include "command_execution.h"
+#include "database_manager.h"
 #include "manager_server.h"
-#include "hash_table.h"
 #include "log.h"
+#include <string.h>
 
-static const uint16_t default_hash_size = 1024;     // 默认哈希表容量
-static hash_table_t *s_hash_table = NULL;           // 哈希表
 command_info_t g_cmd_infos[MAX_CMD];                // 指令操作信息
 
 /**
@@ -104,15 +103,7 @@ static void print_staffs_info(staff_info_t **values, uint64_t count, sort_type_t
  * @param request   原始请求
  */
 static void add_employee(query_info_t *query, user_request_t *request) {
-    if (s_hash_table == NULL) {
-        s_hash_table = create_hash_table(default_hash_size);
-        if (s_hash_table == NULL) {
-            request->is_success = false;
-            snprintf(request->result, BUFSIZ, "Failed to add item for creating hash table failed.");
-            return;
-        }
-    }
-    if (add_item_to_table(&s_hash_table, query->info, true)) {
+    if (add_item_to_database(query->info)) {
         request->is_success = true;
         snprintf(request->result, BUFSIZ, "The staff [%llu] is added.", query->info->staff_id);
     }
@@ -125,12 +116,13 @@ static void add_employee(query_info_t *query, user_request_t *request) {
  */
 static void del_employee(query_info_t *query, user_request_t *request) {
     if (query->is_opt_all) {
-        delete_hash_table(&s_hash_table);
+        delete_database();
+        create_database();
         request->is_success = true;
-        snprintf(request->result, BUFSIZ, "The database is deleted.");
+        snprintf(request->result, BUFSIZ, "All staffs are removed.");
     }
     else {
-        if (remove_item_from_table(s_hash_table, query->info->staff_id)) {
+        if (remove_item_from_database(query->info->staff_id)) {
             request->is_success = true;
             snprintf(request->result, BUFSIZ, "The staff [%llu] is removed.", query->info->staff_id);
         }
@@ -147,7 +139,7 @@ static void del_employee(query_info_t *query, user_request_t *request) {
  * @param request   原始请求
  */
 static void mod_employee(query_info_t *query, user_request_t *request) {
-    if (modify_item_from_table(s_hash_table, query->info)) {
+    if (modify_item_from_database(query->info)) {
         request->is_success = true;
         snprintf(request->result, BUFSIZ, "Info of the staff [%llu] is modified.", query->info->staff_id);
     }
@@ -165,17 +157,17 @@ static void mod_employee(query_info_t *query, user_request_t *request) {
 static void get_employee(query_info_t *query, user_request_t *request) {
     if (query->is_opt_all) {
         uint64_t count = 0;
-        staff_info_t **staff_infos = get_all_items_from_table(s_hash_table, &count);
+        staff_info_t **staff_infos = get_by_info_from_database(NULL, &count);
         print_staffs_info(staff_infos, count, query->sort_type, request->result);
     }
     else {
         if (query->info->staff_id > 0) {
-            staff_info_t *staff_info = get_item_by_key(s_hash_table, query->info->staff_id);
+            staff_info_t *staff_info = get_by_id_from_database(query->info->staff_id);
             print_a_staff_info(staff_info, request->result, BUFSIZ);
         }
         else {
             uint64_t count = 0;
-            staff_info_t **staff_infos = get_items_by_info(s_hash_table, query->info, &count);
+            staff_info_t **staff_infos = get_by_info_from_database(query->info, &count);
             print_staffs_info(staff_infos, count, query->sort_type, request->result);
         }
     }
@@ -252,9 +244,7 @@ void execute_input_command(query_info_t *query, user_request_t *request) {
             return;
         case EXIT:
             destroy_all_connection();
-            if (s_hash_table != NULL) {
-                delete_hash_table(&s_hash_table);
-            }
+            delete_database();
             request->is_success = true;
             snprintf(request->result, BUFSIZ, "Process is over, now quit.");
             exit(0);
