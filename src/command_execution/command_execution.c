@@ -181,29 +181,29 @@ void init_all_cmd_info(void) {
     bzero(g_cmd_infos, sizeof(g_cmd_infos));
     g_cmd_infos[ADD].name = "ADD";
     g_cmd_infos[ADD].func = add_employee;
-    g_cmd_infos[ADD].usage = "Use ADD cmd to add a staff to the database.\n"
-        "\te.g. ADD 10086 name:Zhangsan date:2022-05-11 dept:ZTA pos:engineer\n";
+    g_cmd_infos[ADD].usage = "Use 'ADD' cmd to add a staff to the database.\n"
+        "\te.g. [ADD id:10086 name:Zhangsan date:2022-05-11 dept:ZTA pos:engineer]\n";
 
     g_cmd_infos[DEL].name = "DEL";
     g_cmd_infos[DEL].func = del_employee;
-    g_cmd_infos[DEL].usage = "Use DEL cmd to remove a/all staff from the database.\n"
-        "\te.g. DEL 10086 to remove a staff, or DEL * to clear the database.\n";
+    g_cmd_infos[DEL].usage = "Use 'DEL' cmd to remove a/all staff from the database.\n"
+        "\te.g. [DEL id:10086] to remove a staff, or [DEL *] to clear the database.\n";
 
     g_cmd_infos[MOD].name = "MOD";
     g_cmd_infos[MOD].func = mod_employee;
-    g_cmd_infos[MOD].usage = "Use MOD cmd to modify a staff's info.\n"
-        "\te.g. MOD 10086 dept:CWPP name:Lisi\n";
+    g_cmd_infos[MOD].usage = "Use 'MOD' cmd to modify a staff's info.\n"
+        "\te.g. [MOD id:10086 dept:CWPP name:Lisi]\n";
 
     g_cmd_infos[GET].name = "GET";
     g_cmd_infos[GET].func = get_employee;
-    g_cmd_infos[GET].usage = "Use GET cmd to obtain a/all staff's info.\n"
-        "\te.g. GET 10086 to obtain a staff's info, or GET name:Lisi dept:ZTA to obtain one or more staff's info, "
-        "or GET * to print all staff's info.\n"
-        "\tIf you want output being sorted, use --sort:xx, e.g. GET --sort:id * to sort output by staff id.\n";
+    g_cmd_infos[GET].usage = "Use 'GET' cmd to obtain a/all staff's info.\n"
+        "\te.g. [GET id:10086] to obtain a staff's info, or [GET name:Lisi dept:ZTA] to obtain one or more staff's info, "
+        "or [GET *] to print all staff's info.\n"
+        "\tIf you want output being sorted, use '--sort:xx', e.g. [GET --sort:id *] to sort output by staff id.\n";
 
     g_cmd_infos[LOG].name = "LOG";
-    g_cmd_infos[LOG].usage = "Use LOG cmd [local user only] to set log level.\n"
-        "\te.g. LOG debug to set log level to debug. Log level include [debug, info, error, fault, off].\n";
+    g_cmd_infos[LOG].usage = "Use 'LOG' cmd [local user only] to set log level.\n"
+        "\te.g. [LOG debug] to set log level to debug. Log level include [debug, info, error, fault, off].\n";
     g_cmd_infos[HELP].name = "HELP";
     g_cmd_infos[EXIT].name = "EXIT";
 }
@@ -233,7 +233,10 @@ void execute_input_command(query_info_t *query, user_request_t *request) {
               request->is_success = true;
               return;
         case HELP:
-            for (user_command_t i = NUL+1; i <= LOG; ++i) {
+            for (user_command_t i = NUL+1; i < MAX_CMD; ++i) {
+                if (g_cmd_infos[i].usage == NULL) {
+                    continue;
+                }
                 rest = BUFSIZ - strlen(request->result);
                 rest = rest > strlen(g_cmd_infos[i].usage) ? rest : strlen(g_cmd_infos[i].usage);
                 strncat(request->result, g_cmd_infos[i].usage, rest);

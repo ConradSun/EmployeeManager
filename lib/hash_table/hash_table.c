@@ -34,9 +34,9 @@ struct hash_table {
     uint64_t bucket_count;  // 桶数量
     hash_bucket_t *buckets; // 桶数组
 
-    clear_value_callback clear_func;
-    copy_value_callback copy_func;
-    is_value_equal_callback match_func;
+    clear_value_callback clear_func;    // 值清理接口
+    copy_value_callback copy_func;      // 值拷贝接口
+    is_value_equal_callback match_func; // 值匹配接口
 };
 
 static const uint8_t per_bucket = 4;        // 哈希桶容量

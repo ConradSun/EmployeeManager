@@ -16,6 +16,7 @@ static const uint8_t max_cmd_size = 5;              // 最大指令长度
 * @brief 信息类型描述
 */
 static const char *info_type_str[] = {
+    [ID]  = "id",
     [NAME]  = "name",
     [DATE]  = "date",
     [DEPT]  = "dept",
@@ -209,7 +210,7 @@ static info_type_t parse_info_type(const char *string, size_t *end) {
     info_type_t type = TYPE_NONE;
 
     // 匹配信息字符串前缀，获取有效信息类型
-    for (info_type_t i = NAME; i < MAX_TYPE; ++i) {
+    for (info_type_t i = TYPE_NONE + 1; i < MAX_TYPE; ++i) {
         if (is_string_prefix(string, info_type_str[i])) {
             size_t len = strlen(info_type_str[i]);
             if (string[len] == ':') {
@@ -247,6 +248,14 @@ static bool parse_staff_info(const char *string, staff_info_t *info) {
     }
     
     switch (type) {
+        case ID:
+            info->staff_id = atoi(string + end);
+            if (info->staff_id == 0) {
+                LOG_C(LOG_ERROR, "Input staff id is invalid.")
+                return false;
+            }
+            LOG_C(LOG_DEBUG, "Staff id is [%llu].", info->staff_id)
+            break;
         case NAME:
             if (!is_name_valid(string + end)) {
                 LOG_C(LOG_ERROR, "Input name is invalid.")
@@ -381,24 +390,6 @@ static int parse_input_info(const char *input, staff_info_t *info) {
     int index = 0;                      // 当前解析位置
     int space_count = 0;                // 待解析串前空格数量
     size_t size = strlen(input);        // 原始输入大小
-
-    // 获取员工工号
-    start = index;
-    index = get_split_site(input + start, &space_count) + start;
-    start += space_count;
-    if (index == -1) {
-        LOG_C(LOG_ERROR, "Input is invalid [invalid job number].")
-        return -1;
-    }
-    index++;
-    strlcpy(message, input + start, index - start);
-    info->staff_id = atoi(message);
-    // 当前输入不含工号，则解析为员工信息
-    if (info->staff_id == 0) {
-        index = start;
-    }
-    LOG_C(LOG_DEBUG, "Staff id is [%llu].", info->staff_id)
-    bzero(message, BUFSIZ);
     
     // 获取员工信息
     while (index < size) {

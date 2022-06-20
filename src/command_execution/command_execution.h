@@ -34,6 +34,7 @@ typedef enum {
  */
 typedef enum {
     TYPE_NONE,
+    ID,     // 工号
     NAME,   // 姓名
     DATE,   // 日期
     DEPT,   // 部门

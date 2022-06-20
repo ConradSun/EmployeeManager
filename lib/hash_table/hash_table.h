@@ -16,9 +16,9 @@
 #define FREE(ptr)   if (ptr != NULL) {free(ptr); ptr = NULL;}
 
 typedef struct hash_table hash_table_t;     // 哈希表
-typedef void(*clear_value_callback)(void *value);
-typedef void(*copy_value_callback)(void *dst, const void *src);
-typedef bool(*is_value_equal_callback)(const void *src, const void *dst);
+typedef void(*clear_value_callback)(void *value);                           // 值清理回调
+typedef void(*copy_value_callback)(void *dst, const void *src);             // 值拷贝回调
+typedef bool(*is_value_equal_callback)(const void *src, const void *dst);   // 值匹配回调
 
 hash_table_t *create_hash_table(uint64_t max_size, uint64_t value_size, clear_value_callback clear_func, copy_value_callback copy_func, is_value_equal_callback match_func);
 void delete_hash_table(hash_table_t **hash_table);
