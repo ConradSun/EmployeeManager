@@ -167,8 +167,8 @@ hash_table_t *enlarge_hash_table(hash_table_t *old_table) {
  * @brief               查找指定项
  * @param hash_table    哈希表
  * @param key           指定项键
- * @param current       存储指定项当前结点
- * @param last          存储指定项上一结点
+ * @param current       存储指定项当前结点[可选]
+ * @param last          存储指定项上一结点[可选]
  * @return              false表示失败，否则为成功
  */
 static bool find_item_from_table(hash_table_t *hash_table, uint64_t key, entry_node_t **current, entry_node_t **last) {
@@ -210,11 +210,14 @@ bool add_item_to_table(hash_table_t **hash_table, uint64_t key, void *value, boo
     }
     
     hash_table_t *table = *hash_table;
+
+    // 主键存在则禁止插入
     if (find_item_from_table(table, key, NULL, NULL)) {
         LOG_C(LOG_ERROR, "Failed to add the item for already added.");
         return false;
     }
     
+    // 数量超过阈值则扩容
     if (table->count > table->max_size) {
         table = enlarge_hash_table(table);
         if (table == NULL) {
@@ -228,7 +231,6 @@ bool add_item_to_table(hash_table_t **hash_table, uint64_t key, void *value, boo
         LOG_C(LOG_ERROR, "Failed to calloc resources for new node.");
         return false;
     }
-
     new_node->key = key;
     if (is_copy) {
         new_node->value = calloc(1, table->value_size);
@@ -271,6 +273,8 @@ bool remove_item_from_table(hash_table_t *hash_table, uint64_t key) {
 
     entry_node_t *current = NULL;
     entry_node_t *last = NULL;
+
+    // 主键不存在禁止删除
     if (!find_item_from_table(hash_table, key, &current, &last)) {
         LOG_C(LOG_ERROR, "Failed to remove item for not here.");
         return false;
@@ -338,12 +342,12 @@ void *get_item_by_key(hash_table_t *hash_table, uint64_t key) {
 /**
  * @brief               从哈希表获取指定项[匹配指定信息]
  * @param hash_table    哈希表
- * @param value         待匹配项
+ * @param value         待匹配项[NULL表示通配]
  * @param count         匹配成功项个数地址
  * @return              匹配成功项信息
  */
-void **get_items_by_info(hash_table_t *hash_table, void *value, uint64_t *count) {
-    if (hash_table == NULL || value == NULL || count == NULL) {
+void **get_items_by_value(hash_table_t *hash_table, void *value, uint64_t *count) {
+    if (hash_table == NULL || count == NULL) {
         return NULL;
     }
     
@@ -358,7 +362,7 @@ void **get_items_by_info(hash_table_t *hash_table, void *value, uint64_t *count)
         hash_bucket_t *bucket = &hash_table->buckets[i];
         entry_node_t *current_node = bucket->head;
         while (current_node != NULL) {
-            if (hash_table->match_func(value, current_node->value)) {
+            if (value == NULL || hash_table->match_func(value, current_node->value)) {
                 info[*count] = current_node->value;
                 (*count)++;
             }
@@ -369,34 +373,5 @@ void **get_items_by_info(hash_table_t *hash_table, void *value, uint64_t *count)
     if (*count == 0) {
         LOG_C(LOG_ERROR, "No matching items found.");
     }
-    return info;
-}
-
-/**
- * @brief 遍历输出所有项信息
- * @param count 总个数地址
- * @return      所有项信息
- */
-void **get_all_items_from_table(hash_table_t *hash_table, uint64_t *count) {
-    if (hash_table == NULL || count == NULL) {
-        return NULL;
-    }
-
-    *count = 0;
-    void **info = calloc(1, sizeof(void *)*hash_table->count);
-    if (info == NULL) {
-        return NULL;
-    }
-
-    for (uint64_t i = 0; i < hash_table->bucket_count; ++i) {
-        hash_bucket_t *bucket = &hash_table->buckets[i];
-        entry_node_t *current_node = bucket->head;
-        while (current_node != NULL) {
-            info[*count] = current_node->value;
-            (*count)++;
-            current_node = current_node->next;
-        }
-    }
-
     return info;
 }

@@ -11,7 +11,7 @@
 #include "log.h"
 #include <string.h>
 
-command_info_t g_cmd_infos[MAX_CMD];                // 指令操作信息
+command_info_t g_cmd_infos[CMD_MAX];    // 指令操作信息
 
 /**
  * @brief           比较员工工号
@@ -107,6 +107,10 @@ static void add_employee(query_info_t *query, user_request_t *request) {
         request->is_success = true;
         snprintf(request->result, BUFSIZ, "The staff [%llu] is added.", query->info->staff_id);
     }
+    else {
+        request->is_success = false;
+        snprintf(request->result, BUFSIZ, "Failed to add the staff [%llu].", query->info->staff_id);
+    }
 }
 
 /**
@@ -155,20 +159,23 @@ static void mod_employee(query_info_t *query, user_request_t *request) {
  * @param request   原始请求
  */
 static void get_employee(query_info_t *query, user_request_t *request) {
-    if (query->is_opt_all) {
+    if (query->is_opt_all || query->info->staff_id == 0) {
         uint64_t count = 0;
-        staff_info_t **staff_infos = get_by_info_from_database(NULL, &count);
-        print_staffs_info(staff_infos, count, query->sort_type, request->result);
-    }
-    else {
-        if (query->info->staff_id > 0) {
-            staff_info_t *staff_info = get_by_id_from_database(query->info->staff_id);
-            print_a_staff_info(staff_info, request->result, BUFSIZ);
+        staff_info_t **staff_infos = get_by_info_from_database(query->info, &count);
+        if (count == 0) {
+            snprintf(request->result, BUFSIZ, "No items are found.");
         }
         else {
-            uint64_t count = 0;
-            staff_info_t **staff_infos = get_by_info_from_database(query->info, &count);
             print_staffs_info(staff_infos, count, query->sort_type, request->result);
+        }
+    }
+    else {
+        staff_info_t *staff_info = get_by_id_from_database(query->info->staff_id);
+        if (staff_info == NULL) {
+            snprintf(request->result, BUFSIZ, "Staff with id [%llu] is not found.", query->info->staff_id);
+        }
+        else {
+            print_a_staff_info(staff_info, request->result, BUFSIZ);
         }
     }
     request->is_success = true;
@@ -179,33 +186,38 @@ static void get_employee(query_info_t *query, user_request_t *request) {
  */
 void init_all_cmd_info(void) {
     bzero(g_cmd_infos, sizeof(g_cmd_infos));
-    g_cmd_infos[ADD].name = "ADD";
-    g_cmd_infos[ADD].func = add_employee;
-    g_cmd_infos[ADD].usage = "Use 'ADD' cmd to add a staff to the database.\n"
+    g_cmd_infos[CMD_ADD].name = "ADD";
+    g_cmd_infos[CMD_ADD].func = add_employee;
+    g_cmd_infos[CMD_ADD].param = INPUT_ID | INPUT_INFO;
+    g_cmd_infos[CMD_ADD].usage = "Use 'ADD' cmd to add a staff to the database.\n"
         "\te.g. [ADD id:10086 name:Zhangsan date:2022-05-11 dept:ZTA pos:engineer]\n";
 
-    g_cmd_infos[DEL].name = "DEL";
-    g_cmd_infos[DEL].func = del_employee;
-    g_cmd_infos[DEL].usage = "Use 'DEL' cmd to remove a/all staff from the database.\n"
+    g_cmd_infos[CMD_DEL].name = "DEL";
+    g_cmd_infos[CMD_DEL].func = del_employee;
+    g_cmd_infos[CMD_DEL].param = INPUT_GLOBAL | INPUT_INFO;
+    g_cmd_infos[CMD_DEL].usage = "Use 'DEL' cmd to remove a/all staff from the database.\n"
         "\te.g. [DEL id:10086] to remove a staff, or [DEL *] to clear the database.\n";
 
-    g_cmd_infos[MOD].name = "MOD";
-    g_cmd_infos[MOD].func = mod_employee;
-    g_cmd_infos[MOD].usage = "Use 'MOD' cmd to modify a staff's info.\n"
+    g_cmd_infos[CMD_MOD].name = "MOD";
+    g_cmd_infos[CMD_MOD].func = mod_employee;
+    g_cmd_infos[CMD_MOD].param = INPUT_ID | INPUT_INFO;
+    g_cmd_infos[CMD_MOD].usage = "Use 'MOD' cmd to modify a staff's info.\n"
         "\te.g. [MOD id:10086 dept:CWPP name:Lisi]\n";
 
-    g_cmd_infos[GET].name = "GET";
-    g_cmd_infos[GET].func = get_employee;
-    g_cmd_infos[GET].usage = "Use 'GET' cmd to obtain a/all staff's info.\n"
+    g_cmd_infos[CMD_GET].name = "GET";
+    g_cmd_infos[CMD_GET].func = get_employee;
+    g_cmd_infos[CMD_GET].param = INPUT_GLOBAL | INPUT_INFO;
+    g_cmd_infos[CMD_GET].usage = "Use 'GET' cmd to obtain a/all staff's info.\n"
         "\te.g. [GET id:10086] to obtain a staff's info, or [GET name:Lisi dept:ZTA] to obtain one or more staff's info, "
         "or [GET *] to print all staff's info.\n"
-        "\tIf you want output being sorted, use '--sort:xx', e.g. [GET --sort:id *] to sort output by staff id.\n";
+        "\tIf you want output being sorted, use '--sort:id/date', e.g. [GET --sort:id *] to sort output by staff id.\n";
 
-    g_cmd_infos[LOG].name = "LOG";
-    g_cmd_infos[LOG].usage = "Use 'LOG' cmd [local user only] to set log level.\n"
+    g_cmd_infos[CMD_LOG].name = "LOG";
+    g_cmd_infos[CMD_LOG].param = INPUT_LOG;
+    g_cmd_infos[CMD_LOG].usage = "Use 'LOG' cmd [local user only] to set log level.\n"
         "\te.g. [LOG debug] to set log level to debug. Log level include [debug, info, error, fault, off].\n";
-    g_cmd_infos[HELP].name = "HELP";
-    g_cmd_infos[EXIT].name = "EXIT";
+    g_cmd_infos[CMD_HELP].name = "HELP";
+    g_cmd_infos[CMD_EXIT].name = "EXIT";
 }
 
 /**
@@ -221,19 +233,19 @@ void execute_input_command(query_info_t *query, user_request_t *request) {
     command_info_t *cmd_info = NULL;
     size_t rest = 0;
     switch (query->command) {
-        case ADD:
-        case DEL:
-        case MOD:
-        case GET:
+        case CMD_ADD:
+        case CMD_DEL:
+        case CMD_MOD:
+        case CMD_GET:
             cmd_info = &g_cmd_infos[query->command];
             break;
 
-        case LOG:
+        case CMD_LOG:
               snprintf(request->result, BUFSIZ, "LOG level is setted.");
               request->is_success = true;
               return;
-        case HELP:
-            for (user_command_t i = NUL+1; i < MAX_CMD; ++i) {
+        case CMD_HELP:
+            for (user_command_t i = CMD_NUL + 1; i < CMD_MAX; ++i) {
                 if (g_cmd_infos[i].usage == NULL) {
                     continue;
                 }
@@ -245,7 +257,7 @@ void execute_input_command(query_info_t *query, user_request_t *request) {
             strncat(request->result, "The above commands are not case sensitive.\n", rest);
             request->is_success = true;
             return;
-        case EXIT:
+        case CMD_EXIT:
             destroy_all_connection();
             delete_database();
             request->is_success = true;

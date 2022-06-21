@@ -28,7 +28,6 @@ bool add_item_to_table(hash_table_t **hash_table, uint64_t key, void *value, boo
 bool remove_item_from_table(hash_table_t *hash_table, uint64_t key);
 bool modify_item_from_table(hash_table_t *hash_table, uint64_t key, void *value);
 void *get_item_by_key(hash_table_t *hash_table, uint64_t key);
-void **get_items_by_info(hash_table_t *hash_table, void *value, uint64_t *count);
-void **get_all_items_from_table(hash_table_t *hash_table, uint64_t *count);
+void **get_items_by_value(hash_table_t *hash_table, void *value, uint64_t *count);
 
 #endif /* hash_table_h */

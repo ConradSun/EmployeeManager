@@ -16,16 +16,16 @@
 2. 支持本地查询或远程连接查询，程序绑定端口为16166
 3. 本程序目前不支持并发，全部操作均在主线程完成
 ```
-Use ADD cmd to add a staff to the database.
-	e.g. ADD 10086 name:Zhangsan date:2022-05-11 dept:ZTA pos:engineer
-Use DEL cmd to remove a/all staff from the database.
-	e.g. DEL 10086 to remove a staff, or DEL * to clear the database.
-Use MOD cmd to modify a staff's info.
-	e.g. MOD 10086 dept:CWPP name:Lisi
-Use GET cmd to obtain a/all staff's info.
-	e.g. GET 10086 to obtain a staff's info, or GET name:Lisi dept:ZTA to obtain one or more staff's info, or GET * to print all staff's info.
-	If you want output being sorted, use --sort:xx, e.g. GET --sort:id * to sort output by staff id.
-Use LOG cmd [local user only] to set log level.
-	e.g. LOG debug to set log level to debug. Log level include [debug, info, error, fault, off].
+Use 'ADD' cmd to add a staff to the database.
+	e.g. [ADD id:10086 name:Zhangsan date:2022-05-11 dept:ZTA pos:engineer]
+Use 'DEL' cmd to remove a/all staff from the database.
+	e.g. [DEL id:10086] to remove a staff, or [DEL *] to clear the database.
+Use 'MOD' cmd to modify a staff's info.
+	e.g. [MOD id:10086 dept:CWPP name:Lisi]
+Use 'GET' cmd to obtain a/all staff's info.
+	e.g. [GET id:10086] to obtain a staff's info, or [GET name:Lisi dept:ZTA] to obtain one or more staff's info, or [GET *] to print all staff's info.
+	If you want output being sorted, use '--sort:id/date', e.g. [GET --sort:id *] to sort output by staff id.
+Use 'LOG' cmd [local user only] to set log level.
+	e.g. [LOG debug] to set log level to debug. Log level include [debug, info, error, fault, off].
 The above commands are not case sensitive.
 ```

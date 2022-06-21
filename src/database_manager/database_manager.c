@@ -182,11 +182,6 @@ staff_info_t *get_by_id_from_database(uint64_t staff_id) {
  */
 staff_info_t **get_by_info_from_database(staff_info_t *info, uint64_t *count) {
     staff_info_t **items = NULL;
-    if (info != NULL) {
-        items = (staff_info_t **)get_items_by_info(s_hash_table, info, count);
-    }
-    else {
-        items = (staff_info_t **)get_all_items_from_table(s_hash_table, count);
-    }
+    items = (staff_info_t **)get_items_by_value(s_hash_table, info, count);
     return items;
 }
