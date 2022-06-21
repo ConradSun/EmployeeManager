@@ -339,7 +339,7 @@ static user_command_t parse_input_command(char *input) {
  * @param query_info    存放地址
  * @return              false表示解析失败，否则为成功
  */
-bool parse_input_params(const char params[][BUFSIZ], uint8_t count, query_info_t *query_info) {
+static bool parse_input_params(const char params[][BUFSIZ], uint8_t count, query_info_t *query_info) {
     uint16_t param_type = g_cmd_infos[query_info->command].param;
 
     for (uint8_t i = 0; i < count; ++i) {

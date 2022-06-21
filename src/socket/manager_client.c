@@ -19,7 +19,7 @@ log_level_t g_log_level = LOG_INFO;     // 当前日志等级[默认INFO级别]
  * @brief   创建服务端套接字
  * @return  false表示失败，否则成功
  */
-bool create_server_socket(void) {
+static bool create_server_socket(void) {
     server_addr.sin_addr.s_addr = inet_addr(server_ip);
     server_addr.sin_family = AF_INET;
     server_addr.sin_len = sizeof(struct sockaddr_in);
@@ -39,7 +39,7 @@ bool create_server_socket(void) {
  * @brief   连接到服务端
  * @return  false表示失败，否则成功
  */
-bool establish_connection(void) {
+static bool establish_connection(void) {
     int result = connect(server_fd, (struct sockaddr *)&server_addr, sizeof(struct sockaddr_in));
     if (result != 0) {
         LOG_C(LOG_ERROR, "Error occured in connecting.")
@@ -53,7 +53,7 @@ bool establish_connection(void) {
  * @brief   等待用户输入/远程消息
  * @return  false表示无输入，否则有消息
  */
-bool is_message_available() {
+static bool is_message_available() {
     FD_ZERO(&client_set);
     FD_SET(STDIN_FILENO, &client_set);
     FD_SET(server_fd, &client_set);
@@ -75,7 +75,7 @@ bool is_message_available() {
  * @brief   处理本地输入
  * @return  false表示无输入，否则有消息
  */
-void process_input_message(char *input_msg, size_t size) {
+static void process_input_message(char *input_msg, size_t size) {
     if (!FD_ISSET(STDIN_FILENO, &client_set)) {
         return;
     }
@@ -93,7 +93,7 @@ void process_input_message(char *input_msg, size_t size) {
  * @param output_msg    接收缓存
  * @param size          缓存大小
  */
-void receive_message(char *output_msg, size_t size) {
+static void receive_message(char *output_msg, size_t size) {
     if (!FD_ISSET(server_fd, &client_set)) {
         return;
     }

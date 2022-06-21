@@ -13,8 +13,7 @@
 #include <stdbool.h>
 
 bool init_socket_server(void);
-bool process_connect_request(void);
-void process_all_queries(void);
+void process_all_requests(void);
 void destroy_all_connection(void);
 
 #endif /* manager_server_h */

@@ -130,9 +130,46 @@ static void process_user_query(char *input_msg, uint8_t input_fd) {
 }
 
 /**
+ * @brief   处理连接请求
+ * @return  false表示失败，否则成功
+ */
+static bool process_connect_request(void) {
+    if (!FD_ISSET(server_fd, &server_set)) {
+        return true;
+    }
+
+    struct sockaddr_in client_addr;
+    socklen_t addr_len = sizeof(struct sockaddr_in);
+    int temp_fd = accept(server_fd, (struct sockaddr *)&client_addr, &addr_len);
+    if (temp_fd == -1) {
+        LOG_C(LOG_DEBUG, "Error occured in accept connection.")
+        return false;
+    }
+    
+    int index = -1;
+    for (uint8_t i = 0; i < max_clients; i++) {
+        if (clients_fd[i] == 0) {
+            index = i;
+            clients_fd[i] = temp_fd;
+            break;
+        }
+    }
+    if (index >= 0) {
+        LOG_C(LOG_INFO, "NO[%d] client[%s:%d] connect successfully.\n", index, 
+        inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
+    }
+    else {
+        LOG_C(LOG_INFO, "Error occured in accepting new clinet[%s:%d] for no more space.\n", 
+        inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
+    }
+
+    return true;
+}
+
+/**
  * @brief 获取并处理本地输入请求
  */
-void process_local_query(void) {
+static void process_local_query(void) {
     char input_msg[BUFSIZ] = {'\0'};
 
     if (FD_ISSET(STDIN_FILENO, &server_set)) {
@@ -147,7 +184,7 @@ void process_local_query(void) {
 /**
  * @brief 获取并处理远程输入请求
  */
-void process_remote_query(void) {
+static void process_remote_query(void) {
     char input_msg[BUFSIZ] = {'\0'};
 
     for (uint8_t i = 0; i < max_clients; i++) {
@@ -192,51 +229,15 @@ bool init_socket_server(void) {
 }
 
 /**
- * @brief   处理连接请求
- * @return  false表示失败，否则成功
- */
-bool process_connect_request(void) {
-    if (!FD_ISSET(server_fd, &server_set)) {
-        return true;
-    }
-
-    struct sockaddr_in client_addr;
-    socklen_t addr_len = sizeof(struct sockaddr_in);
-    int temp_fd = accept(server_fd, (struct sockaddr *)&client_addr, &addr_len);
-    if (temp_fd == -1) {
-        LOG_C(LOG_DEBUG, "Error occured in accept connection.")
-        return false;
-    }
-    
-    int index = -1;
-    for (uint8_t i = 0; i < max_clients; i++) {
-        if (clients_fd[i] == 0) {
-            index = i;
-            clients_fd[i] = temp_fd;
-            break;
-        }
-    }
-    if (index >= 0) {
-        LOG_C(LOG_INFO, "NO[%d] client[%s:%d] connect successfully.\n", index, 
-        inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
-    }
-    else {
-        LOG_C(LOG_INFO, "Error occured in accepting new clinet[%s:%d] for no more space.\n", 
-        inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
-    }
-
-    return true;
-}
-
-/**
  * @brief 处理所有查询请求
  */
-void process_all_queries(void) {
+void process_all_requests(void) {
     int max_fd = -1;
     if (!is_message_available(&max_fd)) {
         return;
     }
 
+    process_connect_request();
     process_local_query();
     process_remote_query();
 }

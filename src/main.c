@@ -10,15 +10,16 @@
 #include "manager_server.h"
 
 int main(int argc, const char * argv[]) {
-    create_database();
     init_all_cmd_info();
+    if (!create_database()) {
+        return -1;
+    }
     if (!init_socket_server()) {
         return -1;
     }
 
     while (true) {
-        process_connect_request();
-        process_all_queries();
+        process_all_requests();
     }
     
     return 0;
