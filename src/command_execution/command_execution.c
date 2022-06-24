@@ -19,7 +19,7 @@ command_info_t g_cmd_infos[CMD_MAX];    // 指令操作信息
  * @param staff1    员工2
  * @return          比较结果
  */
-static int compare_staff_id(const void *staff1, const void *staff2) {
+STATIC int compare_staff_id(const void *staff1, const void *staff2) {
     if (staff1 == NULL || staff2 == NULL) {
         LOG_C(LOG_DEBUG, "The staff's info is empty.")
         return 0;
@@ -36,7 +36,7 @@ static int compare_staff_id(const void *staff1, const void *staff2) {
  * @param staff1    员工2
  * @return          比较结果
  */
-static int compare_staff_date(const void *staff1, const void *staff2) {
+STATIC int compare_staff_date(const void *staff1, const void *staff2) {
     if (staff1 == NULL || staff2 == NULL) {
         LOG_C(LOG_DEBUG, "The staff's info is empty.")
         return 0;
@@ -55,7 +55,7 @@ static int compare_staff_date(const void *staff1, const void *staff2) {
  * @param output    缓存数组
  * @param size      缓存大小
  */
-static void print_a_staff_info(const staff_info_t *value, char *output, size_t size) {
+STATIC void print_a_staff_info(const staff_info_t *value, char *output, size_t size) {
     if (value == NULL || output == NULL || size == 0) {
         return;
     }
@@ -70,7 +70,7 @@ static void print_a_staff_info(const staff_info_t *value, char *output, size_t s
  * @param count     数组大小
  * @param output    缓存数组
  */
-static void print_staffs_info(staff_info_t **values, uint64_t count, sort_type_t type, char *output) {
+STATIC void print_staffs_info(staff_info_t **values, uint64_t count, sort_type_t type, char *output) {
     if (values == NULL) {
         return;
     }
@@ -102,7 +102,7 @@ static void print_staffs_info(staff_info_t **values, uint64_t count, sort_type_t
  * @param query     查询信息
  * @param request   原始请求
  */
-static void add_employee(query_info_t *query, user_request_t *request) {
+STATIC void add_employee(query_info_t *query, user_request_t *request) {
     if (add_item_to_database(query->info)) {
         request->is_success = true;
         snprintf(request->result, BUFSIZ, "The staff [%llu] is added.", query->info->staff_id);
@@ -118,7 +118,7 @@ static void add_employee(query_info_t *query, user_request_t *request) {
  * @param query     查询信息
  * @param request   原始请求
  */
-static void del_employee(query_info_t *query, user_request_t *request) {
+STATIC void del_employee(query_info_t *query, user_request_t *request) {
     if (query->is_opt_all) {
         delete_database();
         create_database();
@@ -142,7 +142,7 @@ static void del_employee(query_info_t *query, user_request_t *request) {
  * @param query     查询信息
  * @param request   原始请求
  */
-static void mod_employee(query_info_t *query, user_request_t *request) {
+STATIC void mod_employee(query_info_t *query, user_request_t *request) {
     if (modify_item_from_database(query->info)) {
         request->is_success = true;
         snprintf(request->result, BUFSIZ, "Info of the staff [%llu] is modified.", query->info->staff_id);
@@ -158,7 +158,7 @@ static void mod_employee(query_info_t *query, user_request_t *request) {
  * @param query     查询信息
  * @param request   原始请求
  */
-static void get_employee(query_info_t *query, user_request_t *request) {
+STATIC void get_employee(query_info_t *query, user_request_t *request) {
     if (query->is_opt_all || query->info->staff_id == 0) {
         uint64_t count = 0;
         staff_info_t **staff_infos = get_by_info_from_database(query->info, &count);
@@ -168,6 +168,7 @@ static void get_employee(query_info_t *query, user_request_t *request) {
         else {
             print_staffs_info(staff_infos, count, query->sort_type, request->result);
         }
+        FREE(staff_infos)
     }
     else {
         staff_info_t *staff_info = get_by_id_from_database(query->info->staff_id);

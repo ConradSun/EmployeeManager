@@ -8,6 +8,12 @@
 #ifndef log_h
 #define log_h
 
+#ifdef UNIT_TEST
+#define STATIC
+#else
+#define STATIC  static
+#endif
+
 /**
 * @brief 日志打印等级
 */

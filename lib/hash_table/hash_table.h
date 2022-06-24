@@ -29,5 +29,6 @@ bool remove_item_from_table(hash_table_t *hash_table, uint64_t key);
 bool modify_item_from_table(hash_table_t *hash_table, uint64_t key, void *value);
 void *get_item_by_key(hash_table_t *hash_table, uint64_t key);
 void **get_items_by_value(hash_table_t *hash_table, void *value, uint64_t *count);
+uint64_t get_count_from_table(hash_table_t *hash_table);
 
 #endif /* hash_table_h */

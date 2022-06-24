@@ -171,7 +171,7 @@ hash_table_t *enlarge_hash_table(hash_table_t *old_table) {
  * @param last          存储指定项上一结点[可选]
  * @return              false表示失败，否则为成功
  */
-static bool find_item_from_table(hash_table_t *hash_table, uint64_t key, entry_node_t **current, entry_node_t **last) {
+STATIC bool find_item_from_table(hash_table_t *hash_table, uint64_t key, entry_node_t **current, entry_node_t **last) {
     hash_bucket_t *bucket = &hash_table->buckets[hash_code(key, hash_table->bucket_count)];
     entry_node_t *temp_node = bucket->head;
     entry_node_t *last_node = bucket->head;
@@ -374,4 +374,17 @@ void **get_items_by_value(hash_table_t *hash_table, void *value, uint64_t *count
         LOG_C(LOG_ERROR, "No matching items found.");
     }
     return info;
+}
+
+/**
+ * @brief               获取哈希表元素数量
+ * @param hash_table    哈希表
+ * @return              元素数量
+ */
+uint64_t get_count_from_table(hash_table_t *hash_table) {
+    if (hash_table == NULL) {
+        return 0;
+    }
+
+    return hash_table->count;
 }

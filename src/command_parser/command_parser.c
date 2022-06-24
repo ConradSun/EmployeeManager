@@ -36,7 +36,7 @@ static const char *sort_type_str[] = {
 /**
 * @brief 日志类型描述
 */
-static const char *log_level_str[] = {
+STATIC const char *log_level_str[] = {
     [LOG_OFF]   = "off",
     [LOG_FAULT] = "fault",
     [LOG_ERROR] = "error",
@@ -67,7 +67,7 @@ static void string_to_upper(char *string) {
  * @param prefix    匹配前缀
  * @return          false表示匹配失败，否则为成功
  */
-static bool is_string_prefix(const char *string, const char *prefix) {
+STATIC bool is_string_prefix(const char *string, const char *prefix) {
     size_t str_len = strlen(string);
     size_t pre_len = strlen(prefix);
     
@@ -88,7 +88,7 @@ static bool is_string_prefix(const char *string, const char *prefix) {
  * @param space_count   无效空格数量
  * @return              -1表示不存在，否则为分割符位置
  */
-static int get_split_site(const char *string, int *space_count) {
+STATIC int get_split_site(const char *string, int *space_count) {
     size_t index = 0;
     size_t size = strlen(string);
     *space_count = 0;
@@ -121,7 +121,7 @@ static int get_split_site(const char *string, int *space_count) {
  * @param params    待填充参数数组
  * @return          解析参数个数
  */
-static uint8_t get_split_params(const char *string, char params[][BUFSIZ]) {
+STATIC uint8_t get_split_params(const char *string, char params[][BUFSIZ]) {
     uint8_t param_cnt = 0;          // 参数数量
     size_t size = strlen(string);   // 字符串长度
     int start = 0;                  // 待解析串起点
@@ -154,7 +154,7 @@ static uint8_t get_split_params(const char *string, char params[][BUFSIZ]) {
  * @param string    待判断字符串
  * @return          false表示非法，否则为合法
  */
-static bool is_date_valid(const char *string) {
+STATIC bool is_date_valid(const char *string) {
     uint8_t date_str_size = 10;     // 日期字符串大小
     uint8_t year_split_site = 4;    // 分隔符位置1
     uint8_t month_split_site = 7;   // 分隔符位置2
@@ -183,7 +183,7 @@ static bool is_date_valid(const char *string) {
  * @param string    待判断字符串
  * @return          false表示非法，否则为合法
  */
-static bool is_name_valid(const char *string) {
+STATIC bool is_name_valid(const char *string) {
     size_t str_len = strlen(string);
     for (size_t i = 0; i < str_len; ++i) {
         if (isalpha(string[i]) == 0) {
@@ -198,7 +198,7 @@ static bool is_name_valid(const char *string) {
  * @param string    待解析字符串
  * @return          排序方式
  */
-static sort_type_t parse_sort_type(const char *string) {
+STATIC sort_type_t parse_sort_type(const char *string) {
     sort_type_t type = SORT_NONE;
     uint8_t begin = strlen(sort_flag);
 
@@ -221,7 +221,7 @@ static sort_type_t parse_sort_type(const char *string) {
  * @param string    待解析字符串
  * @return          false表示解析失败，否则为成功
  */
-static bool parse_log_level(const char *string) {
+STATIC bool parse_log_level(const char *string) {
     for (log_level_t i = LOG_OFF; i <= LOG_DEBUG; ++i) {
         if (strcmp(string, log_level_str[i]) == 0) {
             g_log_level = i;
@@ -237,7 +237,7 @@ static bool parse_log_level(const char *string) {
  * @param string    待解析字符串
  * @return          false表示解析失败，否则为成功
  */
-static info_type_t parse_info_type(const char *string, size_t *end) {
+STATIC info_type_t parse_info_type(const char *string, size_t *end) {
     info_type_t type = INFO_NONE;
 
     // 匹配信息字符串前缀，获取有效信息类型
@@ -261,7 +261,7 @@ static info_type_t parse_info_type(const char *string, size_t *end) {
  * @param info      信息填充地址
  * @return          false表示解析失败，否则为成功
  */
-static bool parse_staff_info(const char *string, staff_info_t *info) {
+STATIC bool parse_staff_info(const char *string, staff_info_t *info) {
     if (string == NULL) {
         return false;
     }
@@ -317,7 +317,7 @@ static bool parse_staff_info(const char *string, staff_info_t *info) {
  * @param input 待解析字符串
  * @return      解析指令
  */
-static user_command_t parse_input_command(char *input) {
+STATIC user_command_t parse_input_command(char *input) {
     user_command_t command = CMD_NUL;
     // 指令大小写不敏感
     string_to_upper(input);
@@ -339,7 +339,7 @@ static user_command_t parse_input_command(char *input) {
  * @param query_info    存放地址
  * @return              false表示解析失败，否则为成功
  */
-static bool parse_input_params(const char params[][BUFSIZ], uint8_t count, query_info_t *query_info) {
+STATIC bool parse_input_params(const char params[][BUFSIZ], uint8_t count, query_info_t *query_info) {
     uint16_t param_type = g_cmd_infos[query_info->command].param;
 
     for (uint8_t i = 0; i < count; ++i) {

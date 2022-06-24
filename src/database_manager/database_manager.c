@@ -1,5 +1,6 @@
 #include "database_manager.h"
 #include "hash_table.h"
+#include "log.h"
 #include <string.h>
 
 static const uint16_t default_table_size = 1024;    // 默认哈希表容量
@@ -9,7 +10,7 @@ static hash_table_t *s_hash_table = NULL;           // 哈希表
  * @brief       清理存储值
  * @param value 待清理值
  */
-static void clear_value(void *value) {
+STATIC void clear_value(void *value) {
     staff_info_t *info = (staff_info_t *)value;
     if (info != NULL) {
         FREE(info->name)
@@ -24,7 +25,7 @@ static void clear_value(void *value) {
  * @param dst   拷贝至
  * @param src   拷贝于
  */
-static void copy_value(void *dst, const void *src) {
+STATIC void copy_value(void *dst, const void *src) {
     staff_info_t *dst_value = (staff_info_t *)dst;
     staff_info_t *src_value = (staff_info_t *)src;
 
@@ -54,7 +55,7 @@ static void copy_value(void *dst, const void *src) {
  * @param date2 日期2
  * @return      false表示不同，否则为相同
  */
-static inline bool is_date_equal(short_date_t date1, short_date_t date2) {
+STATIC bool is_date_equal(short_date_t date1, short_date_t date2) {
     // date1全0表示通配
     if (date1.year == 0 && date1.month == 0 && date1.day == 0) {
         return true;
@@ -72,7 +73,7 @@ static inline bool is_date_equal(short_date_t date1, short_date_t date2) {
  * @param dst_str   字符串2
  * @return          false表示不同，否则为相同
  */
-static bool is_string_equal(const char *src_str, const char *dst_str) {
+STATIC bool is_string_equal(const char *src_str, const char *dst_str) {
     // src_str为空表示通配
     if (src_str != NULL) {
         if (dst_str != NULL) {
@@ -94,7 +95,7 @@ static bool is_string_equal(const char *src_str, const char *dst_str) {
  * @param dst   信息2
  * @return      false表示不同，否则为相同
  */
-static bool is_value_equal(const void *src, const void *dst) {
+STATIC bool is_value_equal(const void *src, const void *dst) {
     staff_info_t *dst_value = (staff_info_t *)dst;
     staff_info_t *src_value = (staff_info_t *)src;
 

@@ -26,7 +26,7 @@ static int clients_fd[max_clients] = {0};   // 客户端文件描述符
  * @brief   创建服务端套接字
  * @return  false表示失败，否则成功
  */
-static bool create_server_socket(void) {
+STATIC bool create_server_socket(void) {
     int option = 1;
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_family = AF_INET;
@@ -49,7 +49,7 @@ static bool create_server_socket(void) {
  * @brief   绑定端口开始监听
  * @return  false表示失败，否则成功
  */
-static bool wait_for_connect(void) {
+STATIC bool wait_for_connect(void) {
     int result = -1;
     result = bind(server_fd, (struct sockaddr *)&server_addr, sizeof(struct sockaddr_in));
     if (result == -1) {
@@ -70,7 +70,7 @@ static bool wait_for_connect(void) {
  * @param max_fd    管理fd数量
  * @return          false表示无输入，否则有消息
  */
-static bool is_message_available(int *max_fd) {
+STATIC bool is_message_available(int *max_fd) {
     FD_ZERO(&server_set);
     FD_SET(STDIN_FILENO, &server_set);
     *max_fd = *max_fd < STDIN_FILENO ? STDIN_FILENO : *max_fd;
@@ -103,7 +103,7 @@ static bool is_message_available(int *max_fd) {
  * @param client_fd 客户端fd
  * @param result    查询结果
  */
-static void send_query_result(uint8_t client_fd, char *result) {
+STATIC void send_query_result(uint8_t client_fd, char *result) {
     if (!FD_ISSET(client_fd, &server_set) || result == NULL) {
         return;
     }
@@ -115,7 +115,7 @@ static void send_query_result(uint8_t client_fd, char *result) {
  * @param input_msg 用户输入
  * @param input_fd  用户fd
  */
-static void process_user_query(char *input_msg, uint8_t input_fd) {
+STATIC void process_user_query(char *input_msg, uint8_t input_fd) {
     if (input_msg == NULL) {
         return;
     }
@@ -136,7 +136,7 @@ static void process_user_query(char *input_msg, uint8_t input_fd) {
  * @brief   处理连接请求
  * @return  false表示失败，否则成功
  */
-static bool process_connect_request(void) {
+STATIC bool process_connect_request(void) {
     if (!FD_ISSET(server_fd, &server_set)) {
         return true;
     }
@@ -172,7 +172,7 @@ static bool process_connect_request(void) {
 /**
  * @brief 获取并处理本地输入请求
  */
-static void process_local_query(void) {
+STATIC void process_local_query(void) {
     char input_msg[BUFSIZ] = {'\0'};
 
     if (FD_ISSET(STDIN_FILENO, &server_set)) {
@@ -187,7 +187,7 @@ static void process_local_query(void) {
 /**
  * @brief 获取并处理远程输入请求
  */
-static void process_remote_query(void) {
+STATIC void process_remote_query(void) {
     char input_msg[BUFSIZ] = {'\0'};
 
     for (uint8_t i = 0; i < max_clients; i++) {
