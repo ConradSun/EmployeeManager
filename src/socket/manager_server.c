@@ -27,6 +27,7 @@ static int clients_fd[max_clients] = {0};   // 客户端文件描述符
  * @return  false表示失败，否则成功
  */
 static bool create_server_socket(void) {
+    int option = 1;
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_family = AF_INET;
     server_addr.sin_len = sizeof(struct sockaddr_in);
@@ -38,6 +39,8 @@ static bool create_server_socket(void) {
         LOG_C(LOG_ERROR, "Error occured in creating server socket.")
         return false;
     }
+    // 设置端口复用[SO_REUSEADDR为1]
+    setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
     LOG_C(LOG_DEBUG, "Create server socket successfully.")
     return true;
 }
