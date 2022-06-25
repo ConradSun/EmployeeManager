@@ -2,7 +2,7 @@ CC = gcc
 CXX = g++
 OUTPUT = ../bin
 
-TEST = $(OUTPUT)/test
+TEST = $(OUTPUT)/em_test
 TARGET = $(TEST)
 CFLAGS = $(FLAG) -Wall -std=gnu11 -DUNIT_TEST -fstack-protector-strong -fprofile-arcs -ftest-coverage
 CXXFLAGS = -std=c++11 -stdlib=libc++ -Wall -DUNIT_TEST -fprofile-arcs -ftest-coverage

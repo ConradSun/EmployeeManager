@@ -29,3 +29,16 @@ Use 'LOG' cmd [local user only] to set log level.
 	e.g. [LOG debug] to set log level to debug. Log level include [debug, info, error, fault, off].
 The above commands are not case sensitive.
 ```
+
+# 用法
+注意：本项目仅在macOS系统中进行过编译运行，其他系统未进行测试，以下用法仅在macOS系统测试可行
+1. 正常运行
+	(1) 执行build.sh，进行代码编译，生成文件在bin文件夹下，包括libem_db.dylib、em_server、em_client二进制文件；
+	(2) export DYLD_LIBRARY_PATH=./bin && ./bin/em_server
+	(3) 本地输入执行即可执行，或启动em_client连接服务端，远程输入命令执行
+	(4) ./bin/em_client $ip	# ip为空则连接localhost:16166
+	(5) 在em_client交互shell中输入支持指令即可执行并回显执行结果
+
+2. 单元测试
+	(1) 执行test.sh，进行代码编译，生成文件在bin文件夹下，包括em_test二进制文件
+	(2) 脚本自动执行单测并收集数据生成行覆盖率报告，报告位于code_cov_report文件夹下
