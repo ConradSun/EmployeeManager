@@ -262,7 +262,7 @@ STATIC info_type_t parse_info_type(const char *string, size_t *end) {
  * @return          false表示解析失败，否则为成功
  */
 STATIC bool parse_staff_info(const char *string, staff_info_t *info) {
-    if (string == NULL) {
+    if (string == NULL || info == NULL) {
         return false;
     }
     

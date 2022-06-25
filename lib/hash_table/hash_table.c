@@ -55,21 +55,16 @@ static inline uint64_t hash_code(uint64_t key, uint64_t bucket_count) {
 }
 
 /**
- * @brief               创建哈希表
- * @param max_size      最大容量
- * @param value_size    存储信息大小
- * @param clear_func    值清理函数
- * @param copy_func     值拷贝函数
- * @param match_func    值匹配函数
- * @return              哈希表
+ * @brief           创建哈希表
+ * @param config    初始化信息
+ * @return          哈希表
  */
-hash_table_t *create_hash_table(
-    uint64_t max_size, 
-    uint64_t value_size, 
-    clear_value_callback clear_func, 
-    copy_value_callback copy_func, 
-    is_value_equal_callback match_func) {
-    if (max_size == 0 || value_size == 0 || clear_func == NULL || copy_func == NULL || match_func == NULL) {
+hash_table_t *create_hash_table(table_init_config_t *config) {
+    if (config == NULL || config->max_size == 0 || config->value_size == 0) {
+        LOG_C(LOG_ERROR, "Failed to create hash table for invalid param.")
+        return NULL;
+    }
+    if (config->clear_func == NULL || config->copy_func == NULL || config->match_func == NULL) {
         LOG_C(LOG_ERROR, "Failed to create hash table for invalid param.")
         return NULL;
     }
@@ -80,14 +75,14 @@ hash_table_t *create_hash_table(
         return NULL;
     }
     
-    hash_table->max_size = max_size;
-    hash_table->value_size = value_size;
-    hash_table->clear_func = clear_func;
-    hash_table->copy_func = copy_func;
-    hash_table->match_func = match_func;
+    hash_table->max_size = config->max_size;
+    hash_table->value_size = config->value_size;
+    hash_table->clear_func = config->clear_func;
+    hash_table->copy_func = config->copy_func;
+    hash_table->match_func = config->match_func;
 
     // 保证桶数量为偶数个
-    hash_table->bucket_count = (((max_size + per_bucket) / per_bucket) >> 1) << 1;
+    hash_table->bucket_count = (((config->max_size + per_bucket) / per_bucket) >> 1) << 1;
     hash_table->buckets = calloc(1, sizeof(hash_bucket_t) * hash_table->bucket_count);
     if (hash_table->buckets == NULL) {
         LOG_C(LOG_ERROR, "Failed to calloc resources for buckets.")
@@ -138,8 +133,14 @@ hash_table_t *enlarge_hash_table(hash_table_t *old_table) {
         return NULL;
     }
     
-    hash_table_t *new_table = create_hash_table(old_table->max_size*enlarge_factor, old_table->value_size, 
-        old_table->clear_func, old_table->copy_func, old_table->match_func);
+    table_init_config_t config = {
+        .max_size = old_table->max_size*enlarge_factor,
+        .value_size = old_table->value_size,
+        .clear_func = old_table->clear_func,
+        .copy_func = old_table->copy_func,
+        .match_func = old_table->match_func
+    };
+    hash_table_t *new_table = create_hash_table(&config);
     if (new_table == NULL) {
         return NULL;
     }

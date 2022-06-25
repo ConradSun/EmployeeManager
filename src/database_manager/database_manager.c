@@ -124,7 +124,14 @@ STATIC bool is_value_equal(const void *src, const void *dst) {
  * @return  false表示失败，否则为成功
  */
 bool create_database(void) {
-    s_hash_table = create_hash_table(default_table_size, sizeof(staff_info_t), clear_value, copy_value, is_value_equal);
+    table_init_config_t config = {
+        .max_size = default_table_size,
+        .value_size = sizeof(staff_info_t),
+        .clear_func = clear_value,
+        .copy_func = copy_value,
+        .match_func = is_value_equal
+    };
+    s_hash_table = create_hash_table(&config);
     if (s_hash_table == NULL) {
         return false;
     }
