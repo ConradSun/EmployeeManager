@@ -13,13 +13,15 @@ static fd_set client_set = {0};         // 服务端描述符集
 static int server_fd = -1;              // 服务端文件描述符
 static struct sockaddr_in server_addr;  // 服务端地址
 static char *server_ip = "127.0.0.1";   // 服务端ip
+#ifndef UNIT_TEST
 log_level_t g_log_level = LOG_INFO;     // 当前日志等级[默认INFO级别]
+#endif
 
 /**
  * @brief   创建服务端套接字
  * @return  false表示失败，否则成功
  */
-STATIC bool create_server_socket(void) {
+STATIC bool create_peer_socket(void) {
     server_addr.sin_addr.s_addr = inet_addr(server_ip);
     server_addr.sin_family = AF_INET;
     server_addr.sin_len = sizeof(struct sockaddr_in);
@@ -53,7 +55,7 @@ STATIC bool establish_connection(void) {
  * @brief   等待用户输入/远程消息
  * @return  false表示无输入，否则有消息
  */
-STATIC bool is_message_available() {
+STATIC bool is_client_message_available() {
     FD_ZERO(&client_set);
     FD_SET(STDIN_FILENO, &client_set);
     FD_SET(server_fd, &client_set);
@@ -72,7 +74,9 @@ STATIC bool is_message_available() {
 }
 
 /**
- * @brief 处理本地输入
+ * @brief           处理本地输入
+ * @param input_msg 输入缓存
+ * @param size      缓存大小
  */
 STATIC void process_input_message(char *input_msg, size_t size) {
     if (!FD_ISSET(STDIN_FILENO, &client_set)) {
@@ -113,6 +117,21 @@ STATIC void receive_message(char *output_msg, size_t size) {
     LOG_O("%s", output_msg)
 }
 
+/**
+ * @brief   初始化客户端
+ * @return  false表示失败，否则为成功
+ */
+STATIC bool init_socket_client(void) {
+    if (!create_peer_socket()) {
+        return false;
+    }
+    if (!establish_connection()) {
+        return false;
+    }
+    return true;
+}
+
+#ifndef UNIT_TEST
 int main(int argc, const char *argv[]) {
     char input_msg[BUFSIZ];
     char output_msg[BUFSIZ];
@@ -120,15 +139,12 @@ int main(int argc, const char *argv[]) {
     if (argc >=2 && argv[1] != NULL) {
         server_ip = (char *)argv[1];
     }
-    if (!create_server_socket()) {
-        return -1;
-    }
-    if (!establish_connection()) {
+    if (!init_socket_client()) {
         return -1;
     }
     
     while (true) {
-        if (is_message_available()) {
+        if (is_client_message_available()) {
             process_input_message(input_msg, BUFSIZ);
             receive_message(output_msg, BUFSIZ);
         }
@@ -136,3 +152,4 @@ int main(int argc, const char *argv[]) {
     
     return 0;
 }
+#endif

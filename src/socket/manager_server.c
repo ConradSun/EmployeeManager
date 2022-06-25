@@ -67,24 +67,24 @@ STATIC bool wait_for_connect(void) {
 
 /**
  * @brief           等待用户输入/远程消息
- * @param max_fd    管理fd数量
  * @return          false表示无输入，否则有消息
  */
-STATIC bool is_message_available(int *max_fd) {
+STATIC bool is_server_message_available(void) {
+    int max_fd = -1;
     FD_ZERO(&server_set);
     FD_SET(STDIN_FILENO, &server_set);
-    *max_fd = *max_fd < STDIN_FILENO ? STDIN_FILENO : *max_fd;
+    max_fd = max_fd < STDIN_FILENO ? STDIN_FILENO : max_fd;
     FD_SET(server_fd, &server_set);
-    *max_fd = *max_fd < server_fd ? server_fd : *max_fd;
+    max_fd = max_fd < server_fd ? server_fd : max_fd;
 
     for (uint8_t i = 0; i < max_clients; ++i) {
         if (clients_fd[i] != 0) {
             FD_SET(clients_fd[i], &server_set);
-            *max_fd = *max_fd < clients_fd[i] ? clients_fd[i] : *max_fd;
+            max_fd = max_fd < clients_fd[i] ? clients_fd[i] : max_fd;
         }
     }
     
-    int result = select(*max_fd + 1, &server_set, NULL, NULL, NULL);
+    int result = select(max_fd + 1, &server_set, NULL, NULL, NULL);
     if (result < 0) {
         LOG_C(LOG_ERROR, "Error occured in selecting server fd.")
         return false;
@@ -247,8 +247,7 @@ bool init_socket_server(void) {
  * @brief 处理所有查询请求
  */
 void process_all_requests(void) {
-    int max_fd = -1;
-    if (!is_message_available(&max_fd)) {
+    if (!is_server_message_available()) {
         return;
     }
 
