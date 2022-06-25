@@ -72,8 +72,7 @@ STATIC bool is_message_available() {
 }
 
 /**
- * @brief   处理本地输入
- * @return  false表示无输入，否则有消息
+ * @brief 处理本地输入
  */
 STATIC void process_input_message(char *input_msg, size_t size) {
     if (!FD_ISSET(STDIN_FILENO, &client_set)) {

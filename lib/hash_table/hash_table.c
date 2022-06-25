@@ -344,7 +344,7 @@ void *get_item_by_key(hash_table_t *hash_table, uint64_t key) {
  * @param hash_table    哈希表
  * @param value         待匹配项[NULL表示通配]
  * @param count         匹配成功项个数地址
- * @return              匹配成功项信息
+ * @return              匹配成功项信息[动态申请内存，需调用方释放]
  */
 void **get_items_by_value(hash_table_t *hash_table, void *value, uint64_t *count) {
     if (hash_table == NULL || count == NULL) {

@@ -179,7 +179,7 @@ staff_info_t *get_by_id_from_database(uint64_t staff_id) {
  * @brief       获取信息匹配的所有员工信息
  * @param info  员工信息[NULL表示通配]
  * @param count 匹配的员工数量
- * @return      NULL表示失败，否则为成功
+ * @return      NULL表示失败，否则为成功[动态申请内存，需调用方释放]
  */
 staff_info_t **get_by_info_from_database(staff_info_t *info, uint64_t *count) {
     staff_info_t **items = NULL;

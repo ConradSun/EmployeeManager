@@ -16,7 +16,7 @@ command_info_t g_cmd_infos[CMD_MAX];    // 指令操作信息
 /**
  * @brief           比较员工工号
  * @param staff1    员工1
- * @param staff1    员工2
+ * @param staff2    员工2
  * @return          比较结果
  */
 STATIC int compare_staff_id(const void *staff1, const void *staff2) {
@@ -33,7 +33,7 @@ STATIC int compare_staff_id(const void *staff1, const void *staff2) {
 /**
  * @brief           比较员工入职日期
  * @param staff1    员工1
- * @param staff1    员工2
+ * @param staff2    员工2
  * @return          比较结果
  */
 STATIC int compare_staff_date(const void *staff1, const void *staff2) {
@@ -207,7 +207,7 @@ void init_all_cmd_info(void) {
 
     g_cmd_infos[CMD_GET].name = "GET";
     g_cmd_infos[CMD_GET].func = get_employee;
-    g_cmd_infos[CMD_GET].param = INPUT_GLOBAL | INPUT_INFO;
+    g_cmd_infos[CMD_GET].param = INPUT_SORT | INPUT_GLOBAL | INPUT_INFO;
     g_cmd_infos[CMD_GET].usage = "Use 'GET' cmd to obtain a/all staff's info.\n"
         "\te.g. [GET id:10086] to obtain a staff's info, or [GET name:Lisi dept:ZTA] to obtain one or more staff's info, "
         "or [GET *] to print all staff's info.\n"
