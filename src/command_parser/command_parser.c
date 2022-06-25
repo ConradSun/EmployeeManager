@@ -313,14 +313,17 @@ STATIC bool parse_staff_info(const char *string, staff_info_t *info) {
 }
 
 /**
- * @brief       解析输入指令
- * @param input 待解析字符串
- * @return      解析指令
+ * @brief           解析输入指令
+ * @param string    待解析字符串
+ * @return          解析指令
  */
-STATIC user_command_t parse_input_command(char *input) {
+STATIC user_command_t parse_input_command(const char *string) {
     user_command_t command = CMD_NUL;
+    size_t size = strlen(string);
+    char *input = strndup(string, size);
     // 指令大小写不敏感
     string_to_upper(input);
+
     for (user_command_t i = CMD_NUL + 1; i < CMD_MAX; ++i) {
         if (strcmp(input, g_cmd_infos[i].name) == 0) {
             command = i;
@@ -328,7 +331,8 @@ STATIC user_command_t parse_input_command(char *input) {
             break;
         }
     }
-    
+
+    FREE(input)
     return command;
 }
 
@@ -368,7 +372,7 @@ STATIC bool parse_input_params(const char params[][BUFSIZ], uint8_t count, query
         }
         // 检查是否为日志标志[可重复输入，相同信息以最后输入为准]
         if (param_type & INPUT_ID || param_type & INPUT_INFO) {
-            if (parse_staff_info(params[i], query_info->info)) {
+            if (parse_staff_info(params[i], &query_info->info)) {
                 continue;
             }
         }
@@ -378,7 +382,7 @@ STATIC bool parse_input_params(const char params[][BUFSIZ], uint8_t count, query
         return false;
     }
     // 输入参数中含ID表示用户输入必须包含ID
-    if (param_type & INPUT_ID && query_info->info->staff_id == 0) {
+    if (param_type & INPUT_ID && query_info->info.staff_id == 0) {
         return false;
     }
 
@@ -389,46 +393,27 @@ STATIC bool parse_input_params(const char params[][BUFSIZ], uint8_t count, query
  * @brief               处理用户请求
  * @param user_request  用户请求信息
  */
-void process_input_messgae(user_request_t *user_request) {
-    if (user_request == NULL) {
-        return;
+bool parse_user_input(const char *input_request, query_info_t *query_info) {
+    if (input_request == NULL || query_info == NULL) {
+        return false;
     }
 
     char params[max_input_params][BUFSIZ] = {0};    // 参数数组
+    uint8_t param_cnt = 0;                          // 数组大小
     bzero(params, max_input_params*BUFSIZ);
-    uint8_t param_cnt = 0;              // 数组大小
-    staff_info_t info = {0};            // 员工信息
-    query_info_t query_info = {0};      // 查询详情
-
-    query_info.command = CMD_NUL;
-    query_info.info = &info;
-    query_info.is_opt_all = false;
-    query_info.sort_type = SORT_NONE;
+    bzero(query_info, sizeof(query_info_t));
     
     // 获取分割参数
-    param_cnt = get_split_params(user_request->request, params);
+    param_cnt = get_split_params(input_request, params);
     // 获取操作指令
-    query_info.command = parse_input_command(params[0]);
-    if (query_info.command == CMD_NUL) {
-        goto ERROR;
+    query_info->command = parse_input_command(params[0]);
+    if (query_info->command == CMD_NUL) {
+        return false;
     }
     // 获取指令操作数据
-    if (!parse_input_params(params+1, param_cnt-1, &query_info)) {
-        goto ERROR;
+    if (!parse_input_params(params+1, param_cnt-1, query_info)) {
+        return false;
     }
-    // 禁止非本地用户执行EXIT
-    if (user_request->input_fd != STDIN_FILENO && query_info.command == CMD_EXIT) {
-        goto ERROR;
-    }
-    goto EXEC;
 
-ERROR:
-    snprintf(user_request->result, BUFSIZ, "Failed to parse user input for invalid command or info.");
-    goto END;
-EXEC:
-    execute_input_command(&query_info, user_request);
-END:
-    FREE(info.name)
-    FREE(info.position)
-    FREE(info.department)
+    return true;
 }

@@ -78,7 +78,7 @@ typedef struct{
  */
 typedef struct{
     user_command_t command; // 操作指令
-    staff_info_t *info;     // 员工信息
+    staff_info_t info;      // 员工信息
     bool is_opt_all;        // 全局操作标志[仅DEL、GET指令支持]
     sort_type_t sort_type;  // 排序方式[仅GET指令支持]
 } query_info_t;

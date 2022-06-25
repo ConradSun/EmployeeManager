@@ -103,13 +103,13 @@ STATIC void print_staffs_info(staff_info_t **values, uint64_t count, sort_type_t
  * @param request   原始请求
  */
 STATIC void add_employee(query_info_t *query, user_request_t *request) {
-    if (add_item_to_database(query->info)) {
+    if (add_item_to_database(&query->info)) {
         request->is_success = true;
-        snprintf(request->result, BUFSIZ, "The staff [%llu] is added.", query->info->staff_id);
+        snprintf(request->result, BUFSIZ, "The staff [%llu] is added.", query->info.staff_id);
     }
     else {
         request->is_success = false;
-        snprintf(request->result, BUFSIZ, "Failed to add the staff [%llu].", query->info->staff_id);
+        snprintf(request->result, BUFSIZ, "Failed to add the staff [%llu].", query->info.staff_id);
     }
 }
 
@@ -126,13 +126,13 @@ STATIC void del_employee(query_info_t *query, user_request_t *request) {
         snprintf(request->result, BUFSIZ, "All staffs are removed.");
     }
     else {
-        if (remove_item_from_database(query->info->staff_id)) {
+        if (remove_item_from_database(query->info.staff_id)) {
             request->is_success = true;
-            snprintf(request->result, BUFSIZ, "The staff [%llu] is removed.", query->info->staff_id);
+            snprintf(request->result, BUFSIZ, "The staff [%llu] is removed.", query->info.staff_id);
         }
         else {
             request->is_success = false;
-            snprintf(request->result, BUFSIZ, "Failed to remove the staff [%llu].", query->info->staff_id);
+            snprintf(request->result, BUFSIZ, "Failed to remove the staff [%llu].", query->info.staff_id);
         }
     }
 }
@@ -143,13 +143,13 @@ STATIC void del_employee(query_info_t *query, user_request_t *request) {
  * @param request   原始请求
  */
 STATIC void mod_employee(query_info_t *query, user_request_t *request) {
-    if (modify_item_from_database(query->info)) {
+    if (modify_item_from_database(&query->info)) {
         request->is_success = true;
-        snprintf(request->result, BUFSIZ, "Info of the staff [%llu] is modified.", query->info->staff_id);
+        snprintf(request->result, BUFSIZ, "Info of the staff [%llu] is modified.", query->info.staff_id);
     }
     else {
         request->is_success = false;
-        snprintf(request->result, BUFSIZ, "Failed to modify info of the staff [%llu].", query->info->staff_id);
+        snprintf(request->result, BUFSIZ, "Failed to modify info of the staff [%llu].", query->info.staff_id);
     }
 }
 
@@ -159,9 +159,9 @@ STATIC void mod_employee(query_info_t *query, user_request_t *request) {
  * @param request   原始请求
  */
 STATIC void get_employee(query_info_t *query, user_request_t *request) {
-    if (query->is_opt_all || query->info->staff_id == 0) {
+    if (query->is_opt_all || query->info.staff_id == 0) {
         uint64_t count = 0;
-        staff_info_t **staff_infos = get_by_info_from_database(query->info, &count);
+        staff_info_t **staff_infos = get_by_info_from_database(&query->info, &count);
         if (count == 0) {
             snprintf(request->result, BUFSIZ, "No items are found.");
         }
@@ -171,9 +171,9 @@ STATIC void get_employee(query_info_t *query, user_request_t *request) {
         FREE(staff_infos)
     }
     else {
-        staff_info_t *staff_info = get_by_id_from_database(query->info->staff_id);
+        staff_info_t *staff_info = get_by_id_from_database(query->info.staff_id);
         if (staff_info == NULL) {
-            snprintf(request->result, BUFSIZ, "Staff with id [%llu] is not found.", query->info->staff_id);
+            snprintf(request->result, BUFSIZ, "Staff with id [%llu] is not found.", query->info.staff_id);
         }
         else {
             print_a_staff_info(staff_info, request->result, BUFSIZ);

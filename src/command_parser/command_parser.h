@@ -14,6 +14,6 @@
 #include <stdbool.h>
 #include <string.h>
 
-void process_input_messgae(user_request_t *user_request);
+bool parse_user_input(const char *input_request, query_info_t *query_info);
 
 #endif /* command_parser_h */

@@ -120,16 +120,28 @@ STATIC void process_user_query(char *input_msg, uint8_t input_fd) {
         return;
     }
 
+    query_info_t query_info = {0};      // 查询详情
     user_request_t user_request = {0};
     user_request.input_fd = input_fd;
     strlcpy(user_request.request, input_msg, BUFSIZ);
-    process_input_messgae(&user_request);
+    if (!parse_user_input(user_request.request, &query_info)) {
+        snprintf(user_request.result, BUFSIZ, "Failed to parse user input for invalid command or info.");
+        goto END;
+    }
+    
+    execute_input_command(&query_info, &user_request);
+
+END:
     if (input_fd == STDIN_FILENO) {
         LOG_O("%s", user_request.result)
     }
     else {
         send_query_result(input_fd, user_request.result);
     }
+
+    FREE(query_info.info.name)
+    FREE(query_info.info.position)
+    FREE(query_info.info.department)
 }
 
 /**
