@@ -41,16 +41,16 @@ $(OUTPUT)/hash_table.o: ../lib/hash_table/hash_table.c
 	$(CC) -o $@ -c $^ $(INCLUDES) $(CFLAGS)
 
 
-$(OUTPUT)/database_test.o: database_test.cpp
+$(OUTPUT)/database_test.o: ./unit_test/database_test.cpp
 	$(CXX) -o $@ -c $^ $(INCLUDES) $(CXXFLAGS)
 
-$(OUTPUT)/execution_test.o: execution_test.cpp
+$(OUTPUT)/execution_test.o: ./unit_test/execution_test.cpp
 	$(CXX) -o $@ -c $^ $(INCLUDES) $(CXXFLAGS)
 
-$(OUTPUT)/parser_test.o: parser_test.cpp
+$(OUTPUT)/parser_test.o: ./unit_test/parser_test.cpp
 	$(CXX) -o $@ -c $^ $(INCLUDES) $(CXXFLAGS)
 
-$(OUTPUT)/socket_test.o: socket_test.cpp
+$(OUTPUT)/socket_test.o: ./unit_test/socket_test.cpp
 	$(CXX) -o $@ -c $^ $(INCLUDES) $(CXXFLAGS)
 
 $(OUTPUT)/main.o: main.cpp

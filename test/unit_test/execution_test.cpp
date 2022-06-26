@@ -128,12 +128,21 @@ TEST_F(CommandExecTest, Get) {
     EXPECT_EQ(strcmp(request.result, "Staff with id [10089] is not found."), 0);
 
     bzero(&request, sizeof(user_request_t));
+    query.info.staff_id = 0;
+    query.info.date = (short_date_t){2022, 6, 25};
+    execute_input_command(&query, &request);
+    EXPECT_EQ(strcmp(request.result, "staff id: 10086, name: Lisi, date: 2022-06-25, department: CWPP, position: (null).\n"), 0);
+    query.info.date = (short_date_t){0, 0, 0};
+
+    bzero(&request, sizeof(user_request_t));
     query.is_opt_all = true;
     query.sort_type = SORT_ID;
     execute_input_command(&query, &request);
     EXPECT_EQ(strcmp(request.result, "staff id: 10086, name: Lisi, date: 2022-06-25, department: CWPP, position: (null).\nstaff id: 10087, name: WangWu, date: 2022-06-24, department: CWPP, position: (null).\n"), 0);
 
     bzero(&request, sizeof(user_request_t));
+    query.info.staff_id = 0;
+    query.info.department = (char *)"CWPP";
     query.sort_type = SORT_DATE;
     execute_input_command(&query, &request);
     EXPECT_EQ(strcmp(request.result, "staff id: 10087, name: WangWu, date: 2022-06-24, department: CWPP, position: (null).\nstaff id: 10086, name: Lisi, date: 2022-06-25, department: CWPP, position: (null).\n"), 0);
