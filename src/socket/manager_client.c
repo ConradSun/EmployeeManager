@@ -84,9 +84,8 @@ STATIC void process_input_message(char *input_msg, size_t size) {
     }
 
     bzero(input_msg, size);
-    if (fgets(input_msg, size, stdin) == NULL) {
-        LOG_O("Read EOF, now qiut.")
-        exit(0);
+    if (read(STDIN_FILENO, input_msg, size) <= 0) {
+        return;
     }
     send(server_fd, input_msg, size, 0);
 }

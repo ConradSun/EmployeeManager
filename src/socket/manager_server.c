@@ -188,11 +188,9 @@ STATIC void process_local_query(void) {
     char input_msg[BUFSIZ] = {'\0'};
 
     if (FD_ISSET(STDIN_FILENO, &server_set)) {
-        if (fgets(input_msg, BUFSIZ, stdin) == NULL) {
-            LOG_O("Ignore EOF.")
-            return;
-        }
-        process_user_query(input_msg, STDIN_FILENO);
+        if (read(STDIN_FILENO, input_msg, BUFSIZ) > 0) {
+            process_user_query(input_msg, STDIN_FILENO);
+        } 
     }
 }
 
