@@ -1,0 +1,3 @@
+e hash_table_t *$ht = s_hash_table
+e uint64_t $i= 0
+e while ($i < $ht->bucket_count) {entry_node_t *$head = $ht->buckets[$i].head; while ($head != NULL) {staff_info_t *$info = (staff_info_t *)$head->value; (int) printf("staff id: %llu, name: %s, date: %04d-%02d-%02d, department: %s, position: %s.\n", $info->staff_id, $info->name, $info->date.year, $info->date.month, $info->date.day,  $info->department, $info->position); $head = $head->next;} $i++;}

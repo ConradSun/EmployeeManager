@@ -1,0 +1,32 @@
+➜  employee_manager git:(main) ✗ export DYLD_LIBRARY_PATH=./bin
+➜  employee_manager git:(main) ✗ lldb ./bin/em_server
+(lldb) target create "./bin/em_server"
+Current executable set to '/Users/sunkang/Workspace.localized/employee_manager/bin/em_server' (x86_64).
+(lldb) r
+Process 6600 launched: '/Users/sunkang/Workspace.localized/employee_manager/bin/em_server' (x86_64)
+LOG_INFO init_socket_server:240 [-] Init socket successfully, ready for connecting.
+Process 6600 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = signal SIGSTOP
+    frame #0: 0x00007ff81904ad5a libsystem_kernel.dylib`__select + 10
+libsystem_kernel.dylib`__select:
+->  0x7ff81904ad5a <+10>: jae    0x7ff81904ad64            ; <+20>
+    0x7ff81904ad5c <+12>: movq   %rax, %rdi
+    0x7ff81904ad5f <+15>: jmp    0x7ff819043db9            ; cerror
+    0x7ff81904ad64 <+20>: retq   
+Target 0: (em_server) stopped.
+(lldb) e hash_table_t *$ht = s_hash_table
+(lldb) e uint64_t $i= 0
+(lldb) e while ($i < $ht->bucket_count) {entry_node_t *$head = $ht->buckets[$i].head; while ($head != NULL) {staff_info_t *$info = (staff_info_t *)$head->value; (int) printf("staff id: %llu, name: %s, date: %04d-%02d-%02d, department: %s, position: %s.\n", $info->staff_id, $info->name, $info->date.year, $info->date.month, $info->date.day,  $info->department, $info->position); $head = $head->next;} $i++;}
+staff id: 10141, name: Lisi, date: 2022-06-80, department: CWPP, position: (null).
+staff id: 10114, name: Lisi, date: 2022-06-53, department: CWPP, position: (null).
+staff id: 10096, name: Lisi, date: 2022-06-35, department: CWPP, position: (null).
+staff id: 10087, name: Lisi, date: 2022-06-26, department: CWPP, position: (null).
+staff id: 10152, name: Lisi, date: 2022-06-91, department: CWPP, position: (null).
+staff id: 10131, name: Lisi, date: 2022-06-70, department: CWPP, position: (null).
+staff id: 10122, name: Lisi, date: 2022-06-61, department: CWPP, position: (null).
+staff id: 10107, name: Lisi, date: 2022-06-46, department: CWPP, position: (null).
+staff id: 10101, name: Lisi, date: 2022-06-40, department: CWPP, position: (null).
+staff id: 10092, name: Lisi, date: 2022-06-31, department: CWPP, position: (null).
+staff id: 10089, name: Lisi, date: 2022-06-28, department: CWPP, position: (null).
+staff id: 10086, name: Lisi, date: 2022-06-25, department: CWPP, position: (null).
+(lldb) quit
