@@ -41,7 +41,7 @@ struct hash_table {
 
 static const uint8_t per_bucket = 4;        // 哈希桶容量
 static const float enlarge_factor = 1.5;    // 扩容倍数
-log_level_t g_log_level = LOG_INFO;         // 当前日志等级[默认INFO级别]
+log_level_t g_log_level = LOG_OFF;          // 当前日志等级[默认OFF级别]
 
 /**
  * @brief               生成哈希值

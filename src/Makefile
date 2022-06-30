@@ -41,12 +41,12 @@ $(OUTPUT)/main.o: main.c
 	$(CC) -o $@ -c $^ $(INCLUDES) $(CFLAGS)
 
 $(SRV): $(SRV_OBJS)
-	$(CC) -o $@ $^ $(CFLAGS) $(LIB)
+	$(CC) -o $@ $^ $(CFLAGS) $(LIB) -lreadline
 
 
 $(OUTPUT)/manager_client.o: socket/manager_client.c
 	$(CC) -o $@ -c $^ $(INCLUDES) $(CFLAGS)
 
 $(CLT): $(CLT_OBJS)
-	$(CC) -o $@ $^ $(CFLAGS)
+	$(CC) -o $@ $^ $(CFLAGS) -lreadline
 

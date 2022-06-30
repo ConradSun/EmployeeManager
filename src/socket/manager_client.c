@@ -6,13 +6,15 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 #include "log.h"
 
-static uint16_t server_port = 16166;    // 服务端绑定端口
-static fd_set client_set = {0};         // 服务端描述符集
-static int server_fd = -1;              // 服务端文件描述符
 static struct sockaddr_in server_addr;  // 服务端地址
 static char *server_ip = "127.0.0.1";   // 服务端ip
+static uint16_t server_port = 16166;    // 服务端绑定端口
+static int server_fd = -1;              // 服务端文件描述符
+
 #ifndef UNIT_TEST
 log_level_t g_log_level = LOG_INFO;     // 当前日志等级[默认INFO级别]
 #endif
@@ -52,42 +54,21 @@ STATIC bool establish_connection(void) {
 }
 
 /**
- * @brief   等待用户输入/远程消息
- * @return  false表示无输入，否则有消息
- */
-STATIC bool is_client_message_available() {
-    FD_ZERO(&client_set);
-    FD_SET(STDIN_FILENO, &client_set);
-    FD_SET(server_fd, &client_set);
-    
-    int result = select(server_fd + 1, &client_set, NULL, NULL, NULL);
-    if (result < 0) {
-        LOG_C(LOG_ERROR, "Error occured in selecting client fd.")
-        return false;
-    }
-    if (result == 0) {
-        LOG_C(LOG_ERROR, "Selecting client fd timeout.")
-        return false;
-    }
-
-    return true;
-}
-
-/**
  * @brief           处理本地输入
  * @param input_msg 输入缓存
  * @param size      缓存大小
  */
 STATIC void process_input_message(char *input_msg, size_t size) {
-    if (!FD_ISSET(STDIN_FILENO, &client_set)) {
-        return;
+    char *input = readline("client> ");
+    if (input == NULL || strlen(input) == 0) {
+        process_input_message(input_msg, size);
     }
 
+    add_history(input);
     bzero(input_msg, size);
-    if (read(STDIN_FILENO, input_msg, size) <= 0) {
-        return;
-    }
-    send(server_fd, input_msg, size, 0);
+    snprintf(input_msg, size, "%s\n", input);
+    free(input);
+    send(server_fd, input_msg, BUFSIZ, 0);
 }
 
 /**
@@ -96,12 +77,9 @@ STATIC void process_input_message(char *input_msg, size_t size) {
  * @param size          缓存大小
  */
 STATIC void receive_message(char *output_msg, size_t size) {
-    if (!FD_ISSET(server_fd, &client_set)) {
-        return;
-    }
-
     bzero(output_msg, size);
     int msg_size = recv(server_fd, output_msg, size, 0);
+
     if (msg_size < 0) {
         LOG_C(LOG_ERROR, "Error occured in recviving message.")
         return;
@@ -111,8 +89,6 @@ STATIC void receive_message(char *output_msg, size_t size) {
         close(server_fd);
         exit(0);
     }
-
-    msg_size = msg_size > size ? size: msg_size;
     LOG_O("%s", output_msg)
 }
 
@@ -143,10 +119,8 @@ int main(int argc, const char *argv[]) {
     }
     
     while (true) {
-        if (is_client_message_available()) {
-            process_input_message(input_msg, BUFSIZ);
-            receive_message(output_msg, BUFSIZ);
-        }
+        process_input_message(input_msg, BUFSIZ);
+        receive_message(output_msg, BUFSIZ);
     }
     
     return 0;

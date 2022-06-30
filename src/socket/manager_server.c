@@ -10,9 +10,12 @@
 #include "log.h"
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 
 static const int backlog = 5;               // 并发处理连接请求数量
 static const uint8_t max_clients = 8;       // 最大连接客户端数量
@@ -21,6 +24,7 @@ static fd_set server_set = {0};             // 服务端描述符集
 static int server_fd = -1;                  // 服务端文件描述符
 static struct sockaddr_in server_addr;      // 服务端地址
 static int clients_fd[max_clients] = {0};   // 客户端文件描述符
+static pthread_t read_thread = NULL;        // 本地输入处理线程
 
 /**
  * @brief   创建服务端套接字
@@ -66,14 +70,12 @@ STATIC bool wait_for_connect(void) {
 }
 
 /**
- * @brief           等待用户输入/远程消息
- * @return          false表示无输入，否则有消息
+ * @brief   等待远程消息
+ * @return  false表示无输入，否则有消息
  */
 STATIC bool is_server_message_available(void) {
     int max_fd = -1;
     FD_ZERO(&server_set);
-    FD_SET(STDIN_FILENO, &server_set);
-    max_fd = max_fd < STDIN_FILENO ? STDIN_FILENO : max_fd;
     FD_SET(server_fd, &server_set);
     max_fd = max_fd < server_fd ? server_fd : max_fd;
 
@@ -86,7 +88,7 @@ STATIC bool is_server_message_available(void) {
     
     int result = select(max_fd + 1, &server_set, NULL, NULL, NULL);
     if (result < 0) {
-        LOG_C(LOG_ERROR, "Error occured in selecting server fd.")
+        LOG_C(LOG_DEBUG, "Error occured in selecting server fd.")
         return false;
     }
     if (result == 0) {
@@ -186,12 +188,27 @@ STATIC bool process_connect_request(void) {
  */
 STATIC void process_local_query(void) {
     char input_msg[BUFSIZ] = {'\0'};
-
-    if (FD_ISSET(STDIN_FILENO, &server_set)) {
-        if (read(STDIN_FILENO, input_msg, BUFSIZ) > 0) {
-            process_user_query(input_msg, STDIN_FILENO);
-        } 
+    char *input = readline("server> ");
+    if (input == NULL || strlen(input) == 0) {
+        return;
     }
+
+    add_history(input);
+    snprintf(input_msg, BUFSIZ, "%s\n", input);
+    free(input);
+    process_user_query(input_msg, STDIN_FILENO);
+}
+
+/**
+ * @brief           本地输入读取线程循环任务
+ * @param thread    线程标识
+ * @return          NULL
+ */
+STATIC void *runloop_task(void *thread) {
+    while (true) {
+        process_local_query();
+    }
+    return NULL;
 }
 
 /**
@@ -220,7 +237,7 @@ STATIC void process_remote_query(void) {
         }
 
         msg_size = msg_size > BUFSIZ ? BUFSIZ: msg_size;
-        LOG_C(LOG_INFO, "%s", input_msg)
+        // LOG_O("client[%u]> %s", i, input_msg)
         process_user_query(input_msg, clients_fd[i]);
         bzero(input_msg, BUFSIZ);
     }
@@ -231,18 +248,19 @@ STATIC void process_remote_query(void) {
  * @return  false表示失败，否则成功
  */
 bool init_socket_server(void) {
-    if (!create_server_socket()) {
-        return false;
+    if (create_server_socket() && wait_for_connect()) {
+        if (pthread_create(&read_thread, NULL, runloop_task, NULL) == 0)  {
+            LOG_C(LOG_INFO, "Init socket successfully, ready for connecting.")
+            return true;
+        }
     }
-    if (!wait_for_connect()) {
-        return false;
-    }
-    LOG_C(LOG_INFO, "Init socket successfully, ready for connecting.")
-    return true;
+    
+    close(server_fd);
+    return false;
 }
 
 /**
- * @brief 处理所有查询请求
+ * @brief 处理所有远程请求
  */
 void process_all_requests(void) {
     if (!is_server_message_available()) {
@@ -250,14 +268,14 @@ void process_all_requests(void) {
     }
 
     process_connect_request();
-    process_local_query();
     process_remote_query();
 }
 
 /**
  * @brief 断开所有连接
  */
-void destroy_all_connection(void) {
+void uninit_socket_server(void) {
+    pthread_kill(read_thread, 0);
     for (uint8_t i = 0; i < max_clients; ++i) {
         if (clients_fd[i] != 0) {
             close(clients_fd[i]);

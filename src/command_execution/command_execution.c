@@ -259,7 +259,7 @@ void execute_input_command(query_info_t *query, user_request_t *request) {
             request->is_success = true;
             return;
         case CMD_EXIT:
-            destroy_all_connection();
+            uninit_socket_server();
             delete_database();
             request->is_success = true;
             snprintf(request->result, BUFSIZ, "Process is over, now quit.");

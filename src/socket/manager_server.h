@@ -14,6 +14,6 @@
 
 bool init_socket_server(void);
 void process_all_requests(void);
-void destroy_all_connection(void);
+void uninit_socket_server(void);
 
 #endif /* manager_server_h */

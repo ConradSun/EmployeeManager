@@ -57,6 +57,6 @@ $(OUTPUT)/main.o: main.cpp
 	$(CXX) -o $@ -c $^ $(INCLUDES) $(CXXFLAGS)
 
 $(TEST): $(OBJS)
-	$(CXX) -o $@ $^  $(CXXFLAGS) -lgtest
+	$(CXX) -o $@ $^  $(CXXFLAGS) -lgtest -lreadline
 
 
