@@ -31,7 +31,6 @@ class CommandExecTest : public testing::Test {
             .department = (char *)"CWPP",
             .position = NULL
         };
-        init_all_cmd_info();
         create_database();
         add_item_to_database(&info);
         info.staff_id = 10087;

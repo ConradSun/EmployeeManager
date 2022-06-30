@@ -29,9 +29,6 @@ extern user_command_t parse_input_command(const char *string);
 #include <gtest/gtest.h>
 
 class CommandParserTest : public testing::Test {
-    virtual void SetUp() override {
-        init_all_cmd_info();
-    }
 };
 
 TEST_F(CommandParserTest, SplitInput) {

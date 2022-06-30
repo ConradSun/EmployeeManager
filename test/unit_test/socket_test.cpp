@@ -26,7 +26,6 @@ extern void process_input_message(char *input_msg, size_t size);
 
 class SocketTest: public testing::Test {
     virtual void SetUp() override {
-        init_all_cmd_info();
         create_database();
     }
     virtual void TearDown() override {

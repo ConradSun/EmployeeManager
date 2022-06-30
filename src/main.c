@@ -10,7 +10,6 @@
 #include "manager_server.h"
 
 int main(int argc, const char * argv[]) {
-    init_all_cmd_info();
     if (!create_database()) {
         return -1;
     }

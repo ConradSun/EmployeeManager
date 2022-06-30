@@ -97,7 +97,6 @@ typedef struct{
 
 extern command_info_t g_cmd_infos[];
 
-void init_all_cmd_info(void);
 void execute_input_command(query_info_t *query, user_request_t *request);
 
 #endif /* command_execution_h */

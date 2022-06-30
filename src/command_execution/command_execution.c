@@ -20,11 +20,6 @@ command_info_t g_cmd_infos[CMD_MAX];    // 指令操作信息
  * @return          比较结果
  */
 STATIC int compare_staff_id(const void *staff1, const void *staff2) {
-    if (staff1 == NULL || staff2 == NULL) {
-        LOG_C(LOG_DEBUG, "The staff's info is empty.")
-        return 0;
-    }
-
     staff_info_t *info1 = *(staff_info_t **)staff1;
     staff_info_t *info2 = *(staff_info_t **)staff2;
     return info1->staff_id - info2->staff_id;
@@ -37,11 +32,6 @@ STATIC int compare_staff_id(const void *staff1, const void *staff2) {
  * @return          比较结果
  */
 STATIC int compare_staff_date(const void *staff1, const void *staff2) {
-    if (staff1 == NULL || staff2 == NULL) {
-        LOG_C(LOG_DEBUG, "The staff's info is empty.")
-        return 0;
-    }
-    
     staff_info_t *info1 = *(staff_info_t **)staff1;
     staff_info_t *info2 = *(staff_info_t **)staff2;
     uint64_t date1 = info1->date.year * 10000 + info1->date.month * 100 + info1->date.day;
@@ -185,7 +175,7 @@ STATIC void get_employee(query_info_t *query, user_request_t *request) {
 /**
  * @brief 初始化所有指令信息
  */
-void init_all_cmd_info(void) {
+__attribute__((constructor)) void init_all_cmd_info(void) {
     bzero(g_cmd_infos, sizeof(g_cmd_infos));
     g_cmd_infos[CMD_ADD].name = "ADD";
     g_cmd_infos[CMD_ADD].func = add_employee;
