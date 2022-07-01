@@ -119,7 +119,7 @@ TEST_F(CommandParserTest, ParseCommand) {
     command = parse_input_command("gEt");
     EXPECT_EQ(command, CMD_GET);
 
-    command = parse_input_command((char *)"ddd");
+    command = parse_input_command("ddd");
     EXPECT_EQ(command, CMD_NUL);
 }
 
@@ -153,4 +153,12 @@ TEST_F(CommandParserTest, ParseInput) {
 
     EXPECT_FALSE(parse_user_input("NUL\n", &query_info));
     EXPECT_FALSE(parse_user_input("LOG idddd\n", &query_info));
+
+    // 超长输入
+    char long_cmd[2048];
+    for (int i = 0; i < 511; i++) {
+        strcat(long_cmd, "long");
+    }
+    long_cmd[2044] = '\n';
+    EXPECT_FALSE(parse_user_input(long_cmd, &query_info));
 }
