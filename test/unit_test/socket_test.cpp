@@ -70,13 +70,15 @@ TEST_F(SocketTest, Communicate) {
         ASSERT_EQ(pipe(pipe_fds), 0);
         dup2(pipe_fds[0], STDIN_FILENO);
 
-        usleep(500);
+        usleep(1000);
         EXPECT_TRUE(init_socket_server());
         write(pipe_fds[1], "ADD id:invalid\n", BUFSIZ);
-        usleep(500);
+        
         for (int i = 0; i < 2; i++) {
             process_all_requests();
-        }  
+            dup2(pipe_fds[0], STDIN_FILENO);
+            write(pipe_fds[1], "ADD id:10099 name:Tesila date:2022-06-19 dept:CWPP pos:engineer\n", BUFSIZ);
+        }
         
         wait(&state);
         uninit_socket_server();

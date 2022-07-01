@@ -10,7 +10,9 @@
 #include "manager_server.h"
 #include "log.h"
 #include <string.h>
+#include <stdatomic.h>
 
+atomic_int active_request = 0;          // 活跃事件数量
 command_info_t g_cmd_infos[CMD_MAX];    // 指令操作信息
 
 /**
@@ -228,6 +230,10 @@ void execute_input_command(query_info_t *query, user_request_t *request) {
         case CMD_DEL:
         case CMD_MOD:
         case CMD_GET:
+            do {
+                usleep(100);
+            } while (active_request == 1);
+            atomic_fetch_add(&active_request, 1);
             cmd_info = &g_cmd_infos[query->command];
             break;
 
@@ -261,4 +267,5 @@ void execute_input_command(query_info_t *query, user_request_t *request) {
     }
 
     cmd_info->func(query, request);
+    atomic_fetch_sub(&active_request, 1);
 }
