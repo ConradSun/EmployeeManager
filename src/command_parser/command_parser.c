@@ -8,6 +8,7 @@
 #include "command_parser.h"
 #include "common.h"
 #include "log.h"
+#include <time.h>
 #include <ctype.h>
 
 static const uint8_t max_input_params = 32;     // 最多输入参数组
@@ -62,6 +63,27 @@ static void string_to_upper(char *string) {
 }
 
 /**
+ * @brief           转化日期格式字符串为标准时间秒数
+ * @param string    待转化字符串
+ * @return          标准时间秒数
+ */
+static time_t date_to_second(const char *string) {
+    if (string == NULL) {
+        return 0;
+    }
+
+    time_t seconds = 0;
+    struct tm time = {0};
+    char time_str[time_str_size] = {'\0'};
+
+    snprintf(time_str, time_str_size, "%s 09:00:00", string);
+    if (strptime(time_str, "%Y-%m-%d %H:%M:%S", &time) != NULL) {
+        seconds = mktime(&time);
+    }
+    return seconds;
+}
+
+/**
  * @brief           判断字符串是否匹配指定前缀
  * @param string    待判断字符串
  * @param prefix    匹配前缀
@@ -102,12 +124,12 @@ STATIC int get_split_site(const char *string, int *space_count) {
             break;
         }
     }
-    *space_count = index;
+    *space_count = (int)index;
     
     // 查找分隔符[空格、换行、结束符]
     while (index < size) {
         if (string[index] == ' ' || string[index] == '\n' || string[index] == '\0') {
-            return index;
+            return (int)index;
         }
         index++;
     }
@@ -147,35 +169,6 @@ STATIC uint8_t get_split_params(const char *string, char params[][BUFSIZ]) {
     }
 
     return param_cnt;
-}
-
-/**
- * @brief           判断字符串是否为合法日期格式
- * @param string    待判断字符串
- * @return          false表示非法，否则为合法
- */
-STATIC bool is_date_valid(const char *string) {
-    uint8_t date_str_size = 10;     // 日期字符串大小
-    uint8_t year_split_site = 4;    // 分隔符位置1
-    uint8_t month_split_site = 7;   // 分隔符位置2
-    size_t str_len = strlen(string);
-    
-    if (str_len != date_str_size) {
-        return false;
-    }
-    if (string[year_split_site] != '-' || string[month_split_site] != '-') {
-        return false;
-    }
-
-    for (size_t i = 0; i < str_len; ++i) {
-        if (i == year_split_site || month_split_site) {
-            continue;
-        }
-        if (isdigit(string[i]) == 0) {
-            return false;
-        }
-    }
-    return true;
 }
 
 /**
@@ -275,7 +268,7 @@ STATIC bool parse_staff_info(const char *string, staff_info_t *info) {
     
     switch (type) {
         case INFO_ID:
-            info->staff_id = atoi(string + end);
+            info->staff_id = atoi(string+end);
             if (info->staff_id == 0) {
                 LOG_C(LOG_ERROR, "Input staff id is invalid.")
                 return false;
@@ -287,22 +280,20 @@ STATIC bool parse_staff_info(const char *string, staff_info_t *info) {
                 LOG_C(LOG_ERROR, "Input name is invalid.")
                 return false;
             }
-            info->name = strndup(string + end, size - end);
+            info->name = strndup(string+end, size-end);
             break;
         case INFO_DATE:
-            if (!is_date_valid(string + end)) {
+            info->date = (uint64_t)date_to_second(string+end);
+            if (info->date == 0) {
                 LOG_C(LOG_ERROR, "Input date is invalid.")
                 return false;
             }
-            info->date.year = (string[end] - '0') * 1000 + (string[end+1] - '0') * 100 + (string[end+2] - '0') * 10 + (string[end+3] - '0');
-            info->date.month = (string[end+5] - '0') * 10 + (string[end+6] - '0');
-            info->date.day = (string[end+8] - '0') * 10 + (string[end+9] - '0');
             break;
         case INFO_DEPT:
-            info->department = strndup(string + end, size - end);
+            info->department = strndup(string+end, size-end);
             break;
         case INFO_POS:
-            info->position = strndup(string + end, size - end);
+            info->position = strndup(string+end, size-end);
             break;
             
         default:
@@ -391,7 +382,8 @@ STATIC bool parse_input_params(const char params[][BUFSIZ], uint8_t count, query
 
 /**
  * @brief               处理用户请求
- * @param user_request  用户请求信息
+ * @param input_request 用户请求信息
+ * @param query_info    待填充解析信息
  */
 bool parse_user_input(const char *input_request, query_info_t *query_info) {
     if (input_request == NULL || query_info == NULL) {

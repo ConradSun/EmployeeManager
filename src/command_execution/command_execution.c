@@ -9,6 +9,7 @@
 #include "database_manager.h"
 #include "manager_server.h"
 #include "log.h"
+#include <time.h>
 #include <string.h>
 #include <stdatomic.h>
 
@@ -24,7 +25,7 @@ command_info_t g_cmd_infos[CMD_MAX];    // 指令操作信息
 STATIC int compare_staff_id(const void *staff1, const void *staff2) {
     staff_info_t *info1 = *(staff_info_t **)staff1;
     staff_info_t *info2 = *(staff_info_t **)staff2;
-    return info1->staff_id - info2->staff_id;
+    return (int)(info1->staff_id - info2->staff_id);
 }
 
 /**
@@ -36,9 +37,7 @@ STATIC int compare_staff_id(const void *staff1, const void *staff2) {
 STATIC int compare_staff_date(const void *staff1, const void *staff2) {
     staff_info_t *info1 = *(staff_info_t **)staff1;
     staff_info_t *info2 = *(staff_info_t **)staff2;
-    uint64_t date1 = info1->date.year * 10000 + info1->date.month * 100 + info1->date.day;
-    uint64_t date2 = info2->date.year * 10000 + info2->date.month * 100 + info2->date.day;
-    return date1 - date2;
+    return (int)(info1->date - info2->date);
 }
 
 /**
@@ -51,9 +50,11 @@ STATIC void print_a_staff_info(const staff_info_t *value, char *output, size_t s
     if (value == NULL || output == NULL || size == 0) {
         return;
     }
-    snprintf(output, size, "staff id: %llu, name: %s, date: %04d-%02d-%02d, department: %s, position: %s.\n", \
-    value->staff_id, value->name, value->date.year, value->date.month, value->date.day, \
-    value->department, value->position);
+
+    char time_str[time_str_size] = {"\0"};
+    strftime(time_str, time_str_size, "%Y-%m-%d %H:%M:%S", localtime((time_t *)&value->date));
+    snprintf(output, size, "staff id: %llu, name: %s, date: %s, department: %s, position: %s.\n", \
+    value->staff_id, value->name, time_str, value->department, value->position);
 }
 
 /**

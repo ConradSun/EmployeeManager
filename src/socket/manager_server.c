@@ -222,7 +222,7 @@ STATIC void process_remote_query(void) {
             continue;
         }
 
-        int msg_size = recv(clients_fd[i], input_msg, BUFSIZ, 0);
+        ssize_t msg_size = recv(clients_fd[i], input_msg, BUFSIZ, 0);
         if (msg_size < 0) {
             LOG_C(LOG_DEBUG, "Error occured in recviving message.")
             continue;

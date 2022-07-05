@@ -78,7 +78,7 @@ STATIC void process_input_message(char *input_msg, size_t size) {
  */
 STATIC void receive_message(char *output_msg, size_t size) {
     bzero(output_msg, size);
-    int msg_size = recv(server_fd, output_msg, size, 0);
+    ssize_t msg_size = recv(server_fd, output_msg, size, 0);
 
     if (msg_size < 0) {
         LOG_C(LOG_ERROR, "Error occured in recviving message.")

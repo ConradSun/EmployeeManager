@@ -31,9 +31,8 @@ STATIC void copy_value(void *dst, const void *src) {
 
     if (dst_value != NULL && src_value != NULL) {
         dst_value->staff_id = src_value->staff_id;
-        if (src_value->date.year != 0) {
-            dst_value->date = src_value->date;
-        }
+        dst_value->date = src_value->date;
+
         if (src_value->name != NULL) {
             FREE(dst_value->name)
             dst_value->name = strndup(src_value->name, strlen(src_value->name));
@@ -47,24 +46,6 @@ STATIC void copy_value(void *dst, const void *src) {
             dst_value->department = strndup(src_value->department, strlen(src_value->department));
         }
     }
-}
-
-/**
- * @brief       比较日期是否相同
- * @param date1 日期1
- * @param date2 日期2
- * @return      false表示不同，否则为相同
- */
-STATIC bool is_date_equal(short_date_t date1, short_date_t date2) {
-    // date1全0表示通配
-    if (date1.year == 0 && date1.month == 0 && date1.day == 0) {
-        return true;
-    }
-
-    if (date1.year == date2.year && date1.month == date2.month && date1.day == date2.day) {
-        return true;
-    }
-    return false;
 }
 
 /**
@@ -112,7 +93,7 @@ STATIC bool is_value_equal(const void *src, const void *dst) {
     if (!is_string_equal(src_value->position, dst_value->position)) {
         return false;
     }
-    if (!is_date_equal(src_value->date, dst_value->date)) {
+    if (src_value->date != 0 && src_value->date != dst_value->date) {
         return false;
     }
     

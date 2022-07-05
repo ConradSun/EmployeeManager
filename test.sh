@@ -1,6 +1,5 @@
 #！/bin/zsh
 
-cov_dir
 rm -rf "./bin"
 cd "./test" && make
 cd "../bin" && ./em_test

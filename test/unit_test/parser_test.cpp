@@ -14,7 +14,6 @@ extern "C" {
 #include "common.h"
 
 extern uint8_t get_split_params(const char *string, char params[][BUFSIZ]);
-extern bool is_date_valid(const char *string);
 extern bool is_name_valid(const char *string);
 extern sort_type_t parse_sort_type(const char *string);
 extern bool parse_log_level(const char *string);
@@ -50,15 +49,10 @@ TEST_F(CommandParserTest, SplitInput) {
 }
 
 TEST_F(CommandParserTest, CheckInfoValid) {
-    EXPECT_TRUE(is_date_valid("2022-08-04"));
-    EXPECT_FALSE(is_date_valid("2022-8-04"));
-    EXPECT_FALSE(is_date_valid("2022-08-4"));
-    EXPECT_FALSE(is_date_valid("2022-008-04"));
-
     EXPECT_TRUE(is_name_valid("lisi"));
-    EXPECT_FALSE(is_date_valid("lisi5"));
-    EXPECT_FALSE(is_date_valid("5lisi"));
-    EXPECT_FALSE(is_date_valid("li_si"));
+    EXPECT_FALSE(is_name_valid("lisi5"));
+    EXPECT_FALSE(is_name_valid("5lisi"));
+    EXPECT_FALSE(is_name_valid("li_si"));
 }
 
 TEST_F(CommandParserTest, ParseSortType) {
@@ -87,6 +81,8 @@ TEST_F(CommandParserTest, ParseLogLevel) {
 
 TEST_F(CommandParserTest, ParseStaffInfo) {
     staff_info_t info;
+    time_t time = 0;
+    struct tm tm_time = {0};
 
     bzero(&info, sizeof(staff_info_t));
     parse_staff_info("id:1111", &info);
@@ -94,7 +90,9 @@ TEST_F(CommandParserTest, ParseStaffInfo) {
     parse_staff_info("name:lisi", &info);
     EXPECT_EQ(strcmp(info.name, "lisi"), 0);
     parse_staff_info("date:2022-06-25", &info);
-    EXPECT_EQ(info.date.year, 2022);
+    strptime((char *)"2022-06-25 09:00:00", "%Y-%m-%d %H:%M:%S", &tm_time);
+    time = mktime(&tm_time);
+    EXPECT_EQ(info.date, time);
     parse_staff_info("dept:CWPP", &info);
     EXPECT_EQ(strcmp(info.department, "CWPP"), 0);
     parse_staff_info("pos:Programmer", &info);
@@ -104,7 +102,8 @@ TEST_F(CommandParserTest, ParseStaffInfo) {
     EXPECT_FALSE(parse_staff_info("id:invalid", &info));
     EXPECT_FALSE(parse_staff_info("id1:1111", &info));
     EXPECT_FALSE(parse_staff_info("name:lisi3", &info));
-    EXPECT_FALSE(parse_staff_info("date:2202--", &info));
+    EXPECT_FALSE(parse_staff_info("date:2202-13-05", &info));
+    EXPECT_FALSE(parse_staff_info("date:2202-11-32", &info));
 }
 
 TEST_F(CommandParserTest, ParseCommand) {

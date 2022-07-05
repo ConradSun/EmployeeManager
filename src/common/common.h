@@ -11,24 +11,16 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+static const uint8_t time_str_size = 20;        // 时间字符串长度
 #define FREE(ptr)   if (ptr != NULL) {free(ptr); ptr = NULL;}
-
-/**
- * @brief 日期
- */
-typedef struct {
-    uint16_t year;      // 年
-    uint8_t month;      // 月
-    uint8_t day;        // 日
-} short_date_t;
 
 /**
  * @brief 员工信息
  */
 typedef struct {
     uint64_t staff_id;      // 工号
+    uint64_t date;          // 入职日期
     char *name;             // 姓名
-    short_date_t date;      // 日期
     char *department;       // 部门
     char *position;         // 职位
 } staff_info_t;
